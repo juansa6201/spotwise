@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import api from '../api/client.js'
+import { useAuth } from '../auth/AuthContext.jsx'
 
 export default function HomePage() {
-  // Verificación de conexión con el backend (prueba de wiring de la Fase 0).
+  const { isAuthenticated } = useAuth()
   const [apiStatus, setApiStatus] = useState('checking')
 
   useEffect(() => {
@@ -22,8 +24,10 @@ export default function HomePage() {
         </p>
 
         <div className="home__actions">
-          <button className="btn btn--primary">◎ Comenzar análisis</button>
-          <button className="btn btn--ghost">Iniciar sesión</button>
+          <Link to="/analisis" className="btn btn--primary">◎ Comenzar análisis</Link>
+          {!isAuthenticated && (
+            <Link to="/login" className="btn btn--ghost">Iniciar sesión</Link>
+          )}
         </div>
 
         <ApiBadge status={apiStatus} />

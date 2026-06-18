@@ -146,3 +146,7 @@ GOOGLE_PLACES_API_KEY = env("GOOGLE_PLACES_API_KEY", default="")
 
 # Radio fijo de análisis (metros) — definido por el sistema (HU-004).
 ANALISIS_RADIO_METROS = env.int("ANALISIS_RADIO_METROS", default=500)
+
+# Área de cobertura del prototipo: bounding box de la ciudad de Córdoba
+# (lat_min, lat_max, lng_min, lng_max). Usado para validar ubicaciones (HU-003).
+CORDOBA_BBOX = (-31.55, -31.30, -64.36, -64.04)
