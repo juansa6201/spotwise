@@ -1,0 +1,28 @@
+# ---- Python / Django ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.log
+db.sqlite3
+backend/staticfiles/
+backend/media/
+
+# ---- Entorno ----
+.env
+.env.local
+*.local
+
+# ---- Node / Frontend ----
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ---- Datos crudos (datasets grandes / KML sin procesar) ----
+data/raw/
+
+# ---- SO / IDE ----
+.DS_Store
+.idea/
+.vscode/
