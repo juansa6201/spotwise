@@ -1,0 +1,180 @@
+:root {
+  --brand: #15628f;
+  --brand-dark: #0f4a6e;
+  --brand-light: #e8f1f7;
+  --ink: #1f2d3d;
+  --muted: #64748b;
+  --bg: #f5f8fb;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --ok: #15803d;
+  --err: #b91c1c;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  background:
+    linear-gradient(rgba(21, 98, 143, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(21, 98, 143, 0.04) 1px, transparent 1px),
+    var(--bg);
+  background-size: 32px 32px, 32px 32px, auto;
+}
+
+/* ---------- Navbar ---------- */
+.navbar {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 0.9rem 2rem;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.navbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--brand);
+}
+.navbar__logo { font-size: 1.1rem; }
+.navbar__links {
+  display: flex;
+  gap: 1.5rem;
+  margin: 0 auto;
+}
+.navbar__links a {
+  color: var(--muted);
+  font-size: 0.95rem;
+  padding-bottom: 2px;
+  border-bottom: 2px solid transparent;
+}
+.navbar__links a.is-active { color: var(--brand); border-bottom-color: var(--brand); }
+.navbar__user {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+/* ---------- Home ---------- */
+.home {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem 3rem;
+  text-align: center;
+}
+.home__hero h1 {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  line-height: 1.15;
+  margin: 0 auto 1rem;
+  max-width: 620px;
+}
+.home__subtitle {
+  color: var(--muted);
+  max-width: 520px;
+  margin: 0 auto 2rem;
+  font-size: 1.02rem;
+}
+.home__actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  font-size: 0.95rem;
+  padding: 0.7rem 1.3rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn--primary { background: var(--brand); color: #fff; }
+.btn--primary:hover { background: var(--brand-dark); }
+.btn--ghost { background: var(--card); color: var(--ink); border-color: var(--border); }
+.btn--ghost:hover { border-color: var(--brand); color: var(--brand); }
+
+/* ---------- Badge de estado de API ---------- */
+.badge {
+  display: inline-block;
+  margin-top: 1.75rem;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+}
+.badge--muted { background: #eef2f6; color: var(--muted); }
+.badge--ok { background: #e7f6ec; color: var(--ok); }
+.badge--err { background: #fdeaea; color: var(--err); }
+
+/* ---------- Cards ---------- */
+.home__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+  margin-top: 3.5rem;
+  text-align: left;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.25rem 1.4rem;
+}
+.card__label {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--brand);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.card__value {
+  display: block;
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+.card__value small {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.bar {
+  height: 8px;
+  background: #eef2f6;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), var(--brand-dark));
+  border-radius: 999px;
+}
+
+.sparkbars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 48px;
+}
+.sparkbars span {
+  flex: 1;
+  background: #d8e6f0;
+  border-radius: 3px;
+}
+.sparkbars span.is-peak { background: var(--brand); }
