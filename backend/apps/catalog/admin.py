@@ -12,6 +12,11 @@ class RubroAdmin(admin.ModelAdmin):
 
 @admin.register(Barrio)
 class BarrioAdmin(gis_admin.GISModelAdmin):
-    list_display = ["nombre", "indice_socioeconomico", "cantidad_habitantes"]
-    search_fields = ["nombre"]
-    list_filter = ["indice_socioeconomico"]
+    list_display = [
+        "nombre", "semaforo", "ips", "indice_socioeconomico",
+        "cantidad_habitantes", "densidad_hab_km2", "seccional",
+    ]
+    list_filter = ["semaforo", "ips"]
+    search_fields = ["nombre", "seccional"]
+    ordering = ["nombre"]
+    list_per_page = 50
