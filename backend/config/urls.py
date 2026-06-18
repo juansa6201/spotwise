@@ -1,7 +1,7 @@
 """Ruteo principal de la API de SpotWise."""
 from django.contrib import admin
 from django.http import JsonResponse
-from django.urls import path
+from django.urls import include, path
 
 
 def health(_request):
@@ -12,8 +12,7 @@ def health(_request):
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/health/", health, name="health"),
-    # Las rutas de cada módulo se irán incorporando por fase:
-    # path("api/auth/", include("apps.users.urls")),       # Fase 1
-    # path("api/catalog/", include("apps.catalog.urls")),  # Fase 1
+    path("api/auth/", include("apps.users.urls")),        # HU-001, HU-002
+    path("api/catalog/", include("apps.catalog.urls")),   # HU-003
     # path("api/analysis/", include("apps.analysis.urls")),# Fase 3
 ]
