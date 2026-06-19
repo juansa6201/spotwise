@@ -1,4 +1,5 @@
 from django.contrib.gis.geos import Point
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from rest_framework import generics, permissions
 from rest_framework.response import Response
@@ -27,6 +28,14 @@ def _coordenadas(request):
         return None
 
 
+def _rubro(request):
+    """Resuelve el rubro del request; None si falta o el id no es un UUID válido."""
+    try:
+        return Rubro.objects.filter(id=request.data.get("rubro_id")).first()
+    except (DjangoValidationError, ValueError, TypeError):
+        return None
+
+
 class AnalizarView(APIView):
     """HU-006/007/008: calcula el score de viabilidad de una ubicación + rubro."""
 
@@ -40,7 +49,7 @@ class AnalizarView(APIView):
             )
         lat, lng = coords
 
-        rubro = Rubro.objects.filter(id=request.data.get("rubro_id")).first()
+        rubro = _rubro(request)
         if rubro is None:
             return Response({"detail": "Debe seleccionar un rubro válido."}, status=400)
 
@@ -80,7 +89,7 @@ class GuardadosView(generics.ListCreateAPIView):
             )
         lat, lng = coords
 
-        rubro = Rubro.objects.filter(id=request.data.get("rubro_id")).first()
+        rubro = _rubro(request)
         if rubro is None:
             return Response({"detail": "Debe seleccionar un rubro válido."}, status=400)
 

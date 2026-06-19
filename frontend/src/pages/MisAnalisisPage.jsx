@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
-
-const COLOR_DECISION = { ALTA: '#15803d', MEDIA: '#b45309', BAJA: '#b91c1c' }
+import { COLOR_DECISION } from '../utils/score.js'
 
 const fmtFecha = (iso) => {
   try {
