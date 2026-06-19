@@ -4,15 +4,7 @@ import HomePage from './pages/HomePage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import RegisterPage from './pages/RegisterPage.jsx'
 import AnalysisPage from './pages/AnalysisPage.jsx'
-
-function Proximamente({ titulo }) {
-  return (
-    <div className="placeholder">
-      <h2>{titulo}</h2>
-      <p>Esta funcionalidad se implementa en una próxima fase del proyecto.</p>
-    </div>
-  )
-}
+import MisAnalisisPage from './pages/MisAnalisisPage.jsx'
 
 export default function App() {
   return (
@@ -24,7 +16,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/registro" element={<RegisterPage />} />
           <Route path="/analisis" element={<AnalysisPage />} />
-          <Route path="/mis-analisis" element={<Proximamente titulo="Mis Análisis" />} />
+          <Route path="/mis-analisis" element={<MisAnalisisPage />} />
         </Routes>
       </main>
     </>
