@@ -1,0 +1,8 @@
+# Ruff: linter de Python del backend de SpotWise.
+line-length = 120
+target-version = "py312"
+extend-exclude = ["**/migrations/**"]
+
+[lint]
+# E/W: estilo (pycodestyle) · F: errores reales (pyflakes) · I: orden de imports
+select = ["E", "F", "W", "I"]
