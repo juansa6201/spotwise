@@ -8,6 +8,8 @@ Combina tres indicadores (0-100) en un score ponderado:
 
 Los pesos y los topes de normalización son PARÁMETROS CALIBRABLES.
 """
+import math
+
 from django.conf import settings
 from django.contrib.gis.geos import Point
 
@@ -21,7 +23,7 @@ PESO_COMPETENCIA = 0.35
 
 # --- Topes de normalización (calibrables con datos reales) ---
 CAP_COMPETIDORES = 15      # 15+ competidores en el radio -> saturación máxima
-CAP_COMERCIOS = 60         # 60+ comercios -> actividad máxima (tope de Google: 3 páginas)
+CAP_RESENAS = 50000        # volumen de reseñas (user_ratings_total) de referencia -> actividad máxima
 CAP_DENSIDAD = 15000.0     # hab/km² de referencia para densidad máxima
 
 # --- Sub-pesos dentro del indicador poblacional (socioeconómico vs densidad) ---
@@ -77,7 +79,10 @@ def calcular(lat, lng, rubro):
     n_comp = zona["cantidad_mismo_rubro"]
     n_com = zona["cantidad_total_comercios"]
     ind_competencia = round(_clamp(100 * (1 - min(n_comp, CAP_COMPETIDORES) / CAP_COMPETIDORES)), 1)
-    ind_actividad = round(_clamp(100 * min(n_com, CAP_COMERCIOS) / CAP_COMERCIOS), 1)
+    # Actividad = intensidad real de la zona (volumen de reseñas), no mero conteo;
+    # curva logarítmica porque las reseñas se reparten en órdenes de magnitud.
+    total_resenas = zona["total_resenas"]
+    ind_actividad = round(_clamp(100 * math.log1p(total_resenas) / math.log1p(CAP_RESENAS)), 1)
 
     # 4. Score ponderado (si el punto cae fuera de un barrio, poblacional = 50 neutral).
     pob = ind_poblacional if ind_poblacional is not None else 50.0
@@ -109,6 +114,7 @@ def calcular(lat, lng, rubro):
         "competencia": {
             "competidores_directos": n_comp,
             "comercios_totales": n_com,
+            "resenas_totales": total_resenas,
         },
         "lugares": zona["lugares"],
         "cacheado": zona["cacheado"],

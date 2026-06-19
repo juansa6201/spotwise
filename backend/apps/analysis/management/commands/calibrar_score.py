@@ -117,7 +117,7 @@ class Command(BaseCommand):
         )
         self.stdout.write(
             f"  CAPS    competidores={scoring.CAP_COMPETIDORES}  "
-            f"comercios={scoring.CAP_COMERCIOS}  densidad={scoring.CAP_DENSIDAD:.0f} hab/km2"
+            f"resenas={scoring.CAP_RESENAS}  densidad={scoring.CAP_DENSIDAD:.0f} hab/km2"
         )
         self.stdout.write(
             f"  UMBRAL  ALTA>={scoring.UMBRAL_ALTA}  MEDIA>={scoring.UMBRAL_MEDIA}"
@@ -211,7 +211,8 @@ class Command(BaseCommand):
                 f"    [{origen}] {b.nombre[:22]:<22} score={r['score']:>5}  "
                 f"act={ind['actividad_economica']:>5}  comp={ind['competencia']:>5}  "
                 f"(dir={r['competencia']['competidores_directos']}, "
-                f"com={r['competencia']['comercios_totales']})"
+                f"com={r['competencia']['comercios_totales']}, "
+                f"res={r['competencia']['resenas_totales']})"
             )
 
         self._reporte("Actividad economica", actividad)
