@@ -17,9 +17,9 @@ from apps.catalog.models import Barrio
 from apps.places.services import analizar_zona
 
 # --- Pesos del score (suman 1.0) ---
-PESO_POBLACIONAL = 0.35
-PESO_ACTIVIDAD = 0.30
-PESO_COMPETENCIA = 0.35
+PESO_POBLACIONAL = 0.20
+PESO_ACTIVIDAD = 0.20
+PESO_COMPETENCIA = 0.60
 
 # --- Topes de normalización (calibrables con datos reales) ---
 CAP_COMPETIDORES = 15      # 15+ competidores en el radio -> saturación máxima
