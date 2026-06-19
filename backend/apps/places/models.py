@@ -21,6 +21,7 @@ class CacheGooglePlaces(models.Model):
     lng_celda = models.FloatField("longitud de celda")
     cantidad_mismo_rubro = models.IntegerField("cantidad del mismo rubro", default=0)
     cantidad_total_comercios = models.IntegerField("cantidad total de comercios", default=0)
+    total_resenas = models.IntegerField("total de reseñas (proxy de actividad)", default=0)
     resultados = models.JSONField("lugares (caché para el mapa)", default=list, blank=True)
     consultado_at = models.DateTimeField("consultado", auto_now_add=True)
     expira_at = models.DateTimeField("expira")

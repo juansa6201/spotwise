@@ -58,6 +58,7 @@ def _nearby(lat, lng, radius, place_type=None):
                 "lat": loc["lat"],
                 "lng": loc["lng"],
                 "tipos": p.get("types", []),
+                "resenas": p.get("user_ratings_total") or 0,
             })
 
         token = data.get("next_page_token")
@@ -86,6 +87,7 @@ def analizar_zona(lat, lng, rubro, radius=None):
         return {
             "cantidad_mismo_rubro": cache.cantidad_mismo_rubro,
             "cantidad_total_comercios": cache.cantidad_total_comercios,
+            "total_resenas": cache.total_resenas,
             "lugares": cache.resultados,
             "cacheado": True,
         }
@@ -95,6 +97,7 @@ def analizar_zona(lat, lng, rubro, radius=None):
         if rubro.google_place_type else []
     )
     comercios = _nearby(lat, lng, radius, place_type="establishment")
+    total_resenas = sum(c.get("resenas", 0) for c in comercios)
 
     # Unir ambas listas marcando los competidores (para el mapa analítico).
     por_clave = {}
@@ -110,6 +113,7 @@ def analizar_zona(lat, lng, rubro, radius=None):
         defaults={
             "cantidad_mismo_rubro": len(competidores),
             "cantidad_total_comercios": len(comercios),
+            "total_resenas": total_resenas,
             "resultados": lugares,
             "expira_at": ahora + timedelta(days=CACHE_TTL_DIAS),
         },
@@ -117,6 +121,7 @@ def analizar_zona(lat, lng, rubro, radius=None):
     return {
         "cantidad_mismo_rubro": len(competidores),
         "cantidad_total_comercios": len(comercios),
+        "total_resenas": total_resenas,
         "lugares": lugares,
         "cacheado": False,
     }
