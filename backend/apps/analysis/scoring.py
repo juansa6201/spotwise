@@ -21,7 +21,7 @@ PESO_COMPETENCIA = 0.35
 
 # --- Topes de normalización (calibrables con datos reales) ---
 CAP_COMPETIDORES = 15      # 15+ competidores en el radio -> saturación máxima
-CAP_COMERCIOS = 40         # 40+ comercios -> actividad máxima
+CAP_COMERCIOS = 60         # 60+ comercios -> actividad máxima (tope de Google: 3 páginas)
 CAP_DENSIDAD = 15000.0     # hab/km² de referencia para densidad máxima
 
 # --- Sub-pesos dentro del indicador poblacional (socioeconómico vs densidad) ---

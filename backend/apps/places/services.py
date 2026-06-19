@@ -13,7 +13,7 @@ from apps.places.models import CacheGooglePlaces
 NEARBY_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
 CACHE_TTL_DIAS = 30
 CELDA_DECIMALES = 3   # ~110 m: precisión de la celda de caché
-MAX_PAGINAS = 2       # hasta 40 resultados por consulta (20 por página)
+MAX_PAGINAS = 3       # hasta 60 resultados por consulta (20 por página, tope de Google)
 
 
 class PlacesError(RuntimeError):
