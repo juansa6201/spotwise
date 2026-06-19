@@ -24,6 +24,10 @@ CAP_COMPETIDORES = 15      # 15+ competidores en el radio -> saturación máxima
 CAP_COMERCIOS = 40         # 40+ comercios -> actividad máxima
 CAP_DENSIDAD = 15000.0     # hab/km² de referencia para densidad máxima
 
+# --- Sub-pesos dentro del indicador poblacional (socioeconómico vs densidad) ---
+PESO_SOCIO_POBL = 0.6
+PESO_DENS_POBL = 0.4
+
 # --- Cortes de decisión ---
 UMBRAL_ALTA = 70
 UMBRAL_MEDIA = 40
@@ -41,22 +45,32 @@ def _decision(score):
     return "BAJA"
 
 
+def indicador_poblacional(barrio):
+    """
+    Indicador poblacional / socioeconómico (0-100) de un barrio combinando
+    nivel socioeconómico (IPS) y densidad. Devuelve None si el punto no cae en
+    un barrio o no hay datos. Usado por `calcular` y por el comando de calibración.
+    """
+    if barrio is None:
+        return None
+    s_socio = (barrio.ips - 1) / 4 * 100 if barrio.ips else None
+    s_dens = (
+        _clamp(barrio.densidad_hab_km2 / CAP_DENSIDAD * 100)
+        if barrio.densidad_hab_km2 else None
+    )
+    if s_socio is not None and s_dens is not None:
+        return round(PESO_SOCIO_POBL * s_socio + PESO_DENS_POBL * s_dens, 1)
+    if s_socio is not None:
+        return round(s_socio, 1)
+    return None
+
+
 def calcular(lat, lng, rubro):
     # 1. Barrio que contiene el punto (point-in-polygon en PostGIS).
     barrio = Barrio.objects.filter(poligono__contains=Point(lng, lat, srid=4326)).first()
 
     # 2. Indicador poblacional / socioeconómico (IPS + densidad).
-    s_socio = (barrio.ips - 1) / 4 * 100 if (barrio and barrio.ips) else None
-    s_dens = (
-        _clamp(barrio.densidad_hab_km2 / CAP_DENSIDAD * 100)
-        if (barrio and barrio.densidad_hab_km2) else None
-    )
-    if s_socio is not None and s_dens is not None:
-        ind_poblacional = round(0.6 * s_socio + 0.4 * s_dens, 1)
-    elif s_socio is not None:
-        ind_poblacional = round(s_socio, 1)
-    else:
-        ind_poblacional = None
+    ind_poblacional = indicador_poblacional(barrio)
 
     # 3. Indicadores comerciales (Google Places).
     zona = analizar_zona(lat, lng, rubro)
