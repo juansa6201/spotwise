@@ -12,7 +12,7 @@ from django.test import TestCase
 from rest_framework.test import APITestCase
 
 from apps.analysis import scoring
-from apps.analysis.models import AnalisisGuardado, Indicador
+from apps.analysis.models import AnalisisGuardado
 from apps.catalog.models import Barrio, Rubro
 from apps.users.models import Usuario
 
