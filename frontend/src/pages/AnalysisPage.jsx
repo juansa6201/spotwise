@@ -5,7 +5,24 @@ import api from '../api/client.js'
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 const CORDOBA_CENTER = { lat: -31.4201, lng: -64.1888 }
 
-// Centra y acerca el mapa cuando cambia la ubicación seleccionada.
+const COLOR_DECISION = { ALTA: '#15803d', MEDIA: '#b45309', BAJA: '#b91c1c' }
+const LABEL_DECISION = { ALTA: 'Alta viabilidad', MEDIA: 'Viabilidad media', BAJA: 'Baja viabilidad' }
+
+const nivelActividad = (v) => (v >= 66 ? 'Alta' : v >= 33 ? 'Moderada' : 'Baja')
+const nivelCompetencia = (n) => (n >= 10 ? 'Alta' : n >= 4 ? 'Moderada' : 'Baja')
+
+function markerIcon(competidor) {
+  if (!window.google) return undefined
+  return {
+    path: window.google.maps.SymbolPath.CIRCLE,
+    scale: competidor ? 7 : 5,
+    fillColor: competidor ? '#dc2626' : '#9ca3af',
+    fillOpacity: 0.9,
+    strokeColor: '#ffffff',
+    strokeWeight: 1.2,
+  }
+}
+
 function Recenter({ position }) {
   const map = useMap()
   useEffect(() => {
@@ -25,7 +42,10 @@ export default function AnalysisPage() {
   const [query, setQuery] = useState('')
   const [resultados, setResultados] = useState([])
   const [buscando, setBuscando] = useState(false)
-  const [confirmado, setConfirmado] = useState(null)
+
+  const [analizando, setAnalizando] = useState(false)
+  const [resultado, setResultado] = useState(null)
+  const [errorAnalisis, setErrorAnalisis] = useState('')
 
   useEffect(() => {
     api.get('/catalog/rubros/').then(({ data }) => setRubros(data)).catch(() => setRubros([]))
@@ -33,7 +53,8 @@ export default function AnalysisPage() {
 
   const seleccionar = async (lat, lng) => {
     setPosition({ lat, lng })
-    setConfirmado(null)
+    setResultado(null)
+    setErrorAnalisis('')
     try {
       const { data } = await api.post('/catalog/validar-ubicacion/', { lat, lng })
       setValidacion(data)
@@ -63,11 +84,23 @@ export default function AnalysisPage() {
   }
 
   const rubroSel = useMemo(() => rubros.find((r) => r.id === rubroId), [rubros, rubroId])
-  const puedeAnalizar = Boolean(position && validacion?.dentro_de_cordoba && rubroId)
+  const puedeAnalizar = Boolean(position && validacion?.dentro_de_cordoba && rubroId && !analizando)
 
-  const analizar = () => {
+  const analizar = async () => {
     if (!puedeAnalizar) return
-    setConfirmado({ lat: position.lat, lng: position.lng, rubro: rubroSel?.nombre })
+    setAnalizando(true)
+    setResultado(null)
+    setErrorAnalisis('')
+    try {
+      const { data } = await api.post('/analysis/analizar/', {
+        lat: position.lat, lng: position.lng, rubro_id: rubroId,
+      })
+      setResultado(data)
+    } catch (err) {
+      setErrorAnalisis(err.response?.data?.detail || 'No se pudo completar el análisis. Intentá de nuevo.')
+    } finally {
+      setAnalizando(false)
+    }
   }
 
   return (
@@ -81,11 +114,7 @@ export default function AnalysisPage() {
         <form className="analysis__search" onSubmit={buscarDireccion}>
           <label className="field">
             <span>Ubicación</span>
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar dirección o zona…"
-            />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar dirección o zona…" />
           </label>
           <button type="submit" className="btn btn--ghost btn--sm btn--block" disabled={buscando}>
             {buscando ? 'Buscando…' : 'Buscar dirección'}
@@ -109,30 +138,21 @@ export default function AnalysisPage() {
           </select>
         </label>
 
-        {position && validacion && (
+        {position && validacion && !resultado && !analizando && (
           <div className={`analysis__validation ${validacion.dentro_de_cordoba ? 'is-ok' : 'is-err'}`}>
             {validacion.mensaje}
-            <div className="analysis__coords">
-              {position.lat.toFixed(5)}, {position.lng.toFixed(5)}
-            </div>
+            <div className="analysis__coords">{position.lat.toFixed(5)}, {position.lng.toFixed(5)}</div>
           </div>
         )}
 
         <button className="btn btn--primary btn--block" onClick={analizar} disabled={!puedeAnalizar}>
-          Analizar ubicación
+          {analizando ? 'Analizando…' : 'Analizar ubicación'}
         </button>
         <p className="analysis__hint">Radio de análisis predefinido: 500 m.</p>
 
-        {confirmado && (
-          <div className="analysis__confirm">
-            <strong>Ubicación lista para analizar ✓</strong>
-            <p>Rubro: {confirmado.rubro}</p>
-            <p>Coordenadas: {confirmado.lat.toFixed(5)}, {confirmado.lng.toFixed(5)}</p>
-            <p className="analysis__next">
-              El cálculo de competencia, indicadores y score se implementa en la Fase 2/3.
-            </p>
-          </div>
-        )}
+        {analizando && <ProcessingPanel />}
+        {errorAnalisis && <div className="analysis__validation is-err">{errorAnalisis}</div>}
+        {resultado && !analizando && <ResultPanel r={resultado} rubro={rubroSel?.nombre} />}
       </aside>
 
       <div className="analysis__map">
@@ -150,6 +170,9 @@ export default function AnalysisPage() {
               }}
             >
               {position && <Marker position={position} />}
+              {resultado?.lugares?.map((l, i) => (
+                <Marker key={i} position={{ lat: l.lat, lng: l.lng }} icon={markerIcon(l.competidor)} />
+              ))}
               <Recenter position={position} />
             </Map>
           </APIProvider>
@@ -158,8 +181,82 @@ export default function AnalysisPage() {
             Falta configurar <code>VITE_GOOGLE_MAPS_API_KEY</code> en <code>frontend/.env</code>.
           </div>
         )}
-        <div className="analysis__map-hint">Hacé clic en el mapa para seleccionar una ubicación</div>
+
+        {resultado ? (
+          <div className="map-legend">
+            <span><i className="dot dot--comp" /> Competidores ({resultado.lugares.filter((l) => l.competidor).length})</span>
+            <span><i className="dot dot--gen" /> Comercios ({resultado.lugares.filter((l) => !l.competidor).length})</span>
+          </div>
+        ) : (
+          <div className="analysis__map-hint">Hacé clic en el mapa para seleccionar una ubicación</div>
+        )}
       </div>
+    </div>
+  )
+}
+
+function ProcessingPanel() {
+  const pasos = [
+    'Consultando negocios cercanos',
+    'Consultando datos demográficos',
+    'Calculando indicadores',
+    'Generando score de viabilidad',
+  ]
+  return (
+    <div className="processing">
+      <div className="processing__spinner" />
+      <strong>Analizando ubicación…</strong>
+      <ul>{pasos.map((p) => <li key={p}>{p}</li>)}</ul>
+    </div>
+  )
+}
+
+function ResultPanel({ r, rubro }) {
+  const color = COLOR_DECISION[r.decision] || '#64748b'
+  const dens = r.barrio?.densidad_hab_km2
+  return (
+    <div className="result">
+      <div className="result__score">
+        <div
+          className="result__ring"
+          style={{ background: `conic-gradient(${color} ${r.score * 3.6}deg, #e5e7eb 0deg)` }}
+        >
+          <span className="result__num">{Math.round(r.score)}<small>/100</small></span>
+        </div>
+        <span className="result__badge" style={{ background: color }}>{LABEL_DECISION[r.decision]}</span>
+      </div>
+
+      <p className="result__barrio">
+        {rubro ? `${rubro} · ` : ''}Barrio <strong>{r.barrio?.nombre || '—'}</strong>
+      </p>
+
+      <div className="result__indicators">
+        <Indicador label="Actividad comercial"
+          value={nivelActividad(r.indicadores.actividad_economica)} bar={r.indicadores.actividad_economica} />
+        <Indicador label="Competencia del rubro"
+          value={nivelCompetencia(r.competencia.competidores_directos)} bar={100 - r.indicadores.competencia} />
+        <Indicador label="Densidad poblacional"
+          value={dens ? `${Math.round(dens).toLocaleString('es-AR')} hab/km²` : '—'} />
+        <Indicador label="Índice socioeconómico"
+          value={r.barrio?.indice_socioeconomico || '—'} semaforo={r.barrio?.semaforo} />
+      </div>
+
+      <p className="result__counts">
+        {r.competencia.competidores_directos} competidores directos · {r.competencia.comercios_totales} comercios en {r.radio_m} m
+      </p>
+    </div>
+  )
+}
+
+function Indicador({ label, value, bar, semaforo }) {
+  const semColor = { ROJO: '#dc2626', AMARILLO: '#d97706', VERDE: '#16a34a' }[semaforo]
+  return (
+    <div className="ind">
+      <span className="ind__label">{label}</span>
+      <strong className="ind__value" style={semColor ? { color: semColor } : undefined}>{value}</strong>
+      {bar != null && (
+        <div className="ind__bar"><div style={{ width: `${Math.max(0, Math.min(100, bar))}%` }} /></div>
+      )}
     </div>
   )
 }

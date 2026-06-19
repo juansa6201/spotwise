@@ -270,3 +270,57 @@ a.btn { display: inline-block; text-decoration: none; }
 /* ---------- Placeholder (secciones futuras) ---------- */
 .placeholder { max-width: 640px; margin: 4rem auto; text-align: center; color: var(--muted); }
 .placeholder h2 { color: var(--ink); }
+
+/* ====================================================================== */
+/*  Fase 2b/3: procesamiento, resultados del score y leyenda del mapa     */
+/* ====================================================================== */
+
+/* ---------- Procesamiento ---------- */
+.processing {
+  margin-top: 1rem; padding: 1rem; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--card); text-align: center;
+}
+.processing__spinner {
+  width: 34px; height: 34px; margin: 0 auto 0.6rem;
+  border: 3px solid #e5e7eb; border-top-color: var(--brand);
+  border-radius: 50%; animation: sw-spin 0.8s linear infinite;
+}
+@keyframes sw-spin { to { transform: rotate(360deg); } }
+.processing ul { list-style: none; padding: 0; margin: 0.6rem 0 0; text-align: left; font-size: 0.82rem; color: var(--muted); }
+.processing li { padding: 0.18rem 0 0.18rem 1.2rem; position: relative; }
+.processing li::before { content: '○'; position: absolute; left: 0; color: var(--brand); }
+
+/* ---------- Resultados ---------- */
+.result { margin-top: 1rem; }
+.result__score { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
+.result__ring {
+  position: relative; width: 120px; height: 120px; border-radius: 50%;
+  display: grid; place-items: center;
+}
+.result__ring::before {
+  content: ''; position: absolute; width: 92px; height: 92px;
+  border-radius: 50%; background: var(--card);
+}
+.result__num { position: relative; font-size: 2rem; font-weight: 700; color: var(--ink); }
+.result__num small { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+.result__badge { color: #fff; font-size: 0.8rem; font-weight: 600; padding: 0.25rem 0.8rem; border-radius: 999px; }
+.result__barrio { text-align: center; font-size: 0.85rem; color: var(--muted); margin: 0.8rem 0; }
+.result__indicators { display: grid; gap: 0.6rem; }
+.result__counts { font-size: 0.76rem; color: var(--muted); text-align: center; margin-top: 0.8rem; }
+
+.ind { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.7rem; }
+.ind__label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
+.ind__value { display: block; font-size: 1rem; margin: 0.15rem 0 0.35rem; }
+.ind__bar { height: 6px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+.ind__bar > div { height: 100%; background: var(--brand); border-radius: 999px; }
+
+/* ---------- Leyenda del mapa ---------- */
+.map-legend {
+  position: absolute; top: 12px; right: 12px; z-index: 1000;
+  background: rgba(255, 255, 255, 0.96); border: 1px solid var(--border);
+  border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.78rem;
+  box-shadow: var(--shadow); display: grid; gap: 0.3rem;
+}
+.map-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 0.4rem; vertical-align: middle; }
+.dot--comp { background: #dc2626; }
+.dot--gen { background: #9ca3af; }

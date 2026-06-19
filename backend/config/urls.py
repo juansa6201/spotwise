@@ -14,5 +14,5 @@ urlpatterns = [
     path("api/health/", health, name="health"),
     path("api/auth/", include("apps.users.urls")),        # HU-001, HU-002
     path("api/catalog/", include("apps.catalog.urls")),   # HU-003
-    # path("api/analysis/", include("apps.analysis.urls")),# Fase 3
+    path("api/analysis/", include("apps.analysis.urls")),  # HU-006/007/008
 ]
