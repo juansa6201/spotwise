@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { APIProvider, Map, Marker, useMap } from '@vis.gl/react-google-maps'
 import api from '../api/client.js'
+import { useAuth } from '../auth/AuthContext.jsx'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 const CORDOBA_CENTER = { lat: -31.4201, lng: -64.1888 }
@@ -47,6 +49,11 @@ export default function AnalysisPage() {
   const [resultado, setResultado] = useState(null)
   const [errorAnalisis, setErrorAnalisis] = useState('')
 
+  const { isAuthenticated } = useAuth()
+  const [guardado, setGuardado] = useState(null)
+  const [guardando, setGuardando] = useState(false)
+  const [errorGuardar, setErrorGuardar] = useState('')
+
   useEffect(() => {
     api.get('/catalog/rubros/').then(({ data }) => setRubros(data)).catch(() => setRubros([]))
   }, [])
@@ -55,6 +62,8 @@ export default function AnalysisPage() {
     setPosition({ lat, lng })
     setResultado(null)
     setErrorAnalisis('')
+    setGuardado(null)
+    setErrorGuardar('')
     try {
       const { data } = await api.post('/catalog/validar-ubicacion/', { lat, lng })
       setValidacion(data)
@@ -91,6 +100,8 @@ export default function AnalysisPage() {
     setAnalizando(true)
     setResultado(null)
     setErrorAnalisis('')
+    setGuardado(null)
+    setErrorGuardar('')
     try {
       const { data } = await api.post('/analysis/analizar/', {
         lat: position.lat, lng: position.lng, rubro_id: rubroId,
@@ -100,6 +111,25 @@ export default function AnalysisPage() {
       setErrorAnalisis(err.response?.data?.detail || 'No se pudo completar el análisis. Intentá de nuevo.')
     } finally {
       setAnalizando(false)
+    }
+  }
+
+  const guardar = async (nombreReferencia) => {
+    if (!resultado) return
+    setGuardando(true)
+    setErrorGuardar('')
+    try {
+      const { data } = await api.post('/analysis/guardados/', {
+        lat: resultado.lat,
+        lng: resultado.lng,
+        rubro_id: resultado.rubro.id,
+        nombre_referencia: nombreReferencia,
+      })
+      setGuardado(data)
+    } catch (err) {
+      setErrorGuardar(err.response?.data?.detail || 'No se pudo guardar el análisis.')
+    } finally {
+      setGuardando(false)
     }
   }
 
@@ -152,7 +182,17 @@ export default function AnalysisPage() {
 
         {analizando && <ProcessingPanel />}
         {errorAnalisis && <div className="analysis__validation is-err">{errorAnalisis}</div>}
-        {resultado && !analizando && <ResultPanel r={resultado} rubro={rubroSel?.nombre} />}
+        {resultado && !analizando && (
+          <ResultPanel
+            r={resultado}
+            rubro={rubroSel?.nombre}
+            autenticado={isAuthenticated}
+            onGuardar={guardar}
+            guardando={guardando}
+            guardado={guardado}
+            errorGuardar={errorGuardar}
+          />
+        )}
       </aside>
 
       <div className="analysis__map">
@@ -211,9 +251,10 @@ function ProcessingPanel() {
   )
 }
 
-function ResultPanel({ r, rubro }) {
+function ResultPanel({ r, rubro, autenticado, onGuardar, guardando, guardado, errorGuardar }) {
   const color = COLOR_DECISION[r.decision] || '#64748b'
   const dens = r.barrio?.densidad_hab_km2
+  const [nombre, setNombre] = useState('')
   return (
     <div className="result">
       <div className="result__score">
@@ -244,6 +285,36 @@ function ResultPanel({ r, rubro }) {
       <p className="result__counts">
         {r.competencia.competidores_directos} competidores directos · {r.competencia.comercios_totales} comercios en {r.radio_m} m
       </p>
+
+      <div className="result__save">
+        {!autenticado ? (
+          <p className="result__login-hint">
+            <Link to="/login">Iniciá sesión</Link> para guardar este análisis.
+          </p>
+        ) : guardado ? (
+          <p className="result__saved">
+            ✓ Guardado en <Link to="/mis-analisis">Mis Análisis</Link>.
+          </p>
+        ) : (
+          <>
+            <input
+              className="result__save-input"
+              placeholder="Nombre de referencia (opcional)"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              maxLength={200}
+            />
+            <button
+              className="btn btn--primary btn--block"
+              onClick={() => onGuardar(nombre.trim())}
+              disabled={guardando}
+            >
+              {guardando ? 'Guardando…' : 'Guardar ubicación'}
+            </button>
+            {errorGuardar && <small className="result__save-error">{errorGuardar}</small>}
+          </>
+        )}
+      </div>
     </div>
   )
 }
