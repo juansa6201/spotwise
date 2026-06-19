@@ -3,15 +3,10 @@ import { Link } from 'react-router-dom'
 import { APIProvider, Map, Marker, useMap } from '@vis.gl/react-google-maps'
 import api from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
+import { COLOR_DECISION, LABEL_DECISION, nivelActividad, nivelCompetencia } from '../utils/score.js'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 const CORDOBA_CENTER = { lat: -31.4201, lng: -64.1888 }
-
-const COLOR_DECISION = { ALTA: '#15803d', MEDIA: '#b45309', BAJA: '#b91c1c' }
-const LABEL_DECISION = { ALTA: 'Alta viabilidad', MEDIA: 'Viabilidad media', BAJA: 'Baja viabilidad' }
-
-const nivelActividad = (v) => (v >= 66 ? 'Alta' : v >= 33 ? 'Moderada' : 'Baja')
-const nivelCompetencia = (n) => (n >= 10 ? 'Alta' : n >= 4 ? 'Moderada' : 'Baja')
 
 function markerIcon(competidor) {
   if (!window.google) return undefined
