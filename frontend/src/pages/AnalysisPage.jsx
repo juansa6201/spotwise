@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { APIProvider, Map, Marker, useMap } from '@vis.gl/react-google-maps'
+import { APIProvider, InfoWindow, Map, Marker, useMap } from '@vis.gl/react-google-maps'
 import api from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { COLOR_DECISION, LABEL_DECISION } from '../utils/score.js'
 import IndicadoresAnalisis from '../components/IndicadoresAnalisis.jsx'
 import { direccionCalleNumero } from '../utils/geo.js'
+import { tipoPrincipal } from '../utils/places.js'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 const CORDOBA_CENTER = { lat: -31.4201, lng: -64.1888 }
@@ -21,6 +22,60 @@ function markerIcon(competidor) {
     strokeColor: '#ffffff',
     strokeWeight: 1.2,
   }
+}
+
+// Contenido del InfoWindow al pulsar un comercio del mapa de análisis.
+function LugarInfo({ lugar }) {
+  const tipo = tipoPrincipal(lugar.tipos)
+  return (
+    <div className="lugar-info">
+      <strong className="lugar-info__nombre">{lugar.nombre || 'Negocio sin nombre'}</strong>
+      <span className={`lugar-info__tag ${lugar.competidor ? 'is-comp' : ''}`}>
+        {lugar.competidor ? 'Competidor directo' : 'Comercio'}
+      </span>
+      <dl className="lugar-info__rows">
+        {lugar.rating != null && (
+          <div><dt>Calificación</dt><dd>★ {lugar.rating}</dd></div>
+        )}
+        <div><dt>Reseñas</dt><dd>{(lugar.resenas ?? 0).toLocaleString('es-AR')}</dd></div>
+        {tipo && <div><dt>Tipo</dt><dd className="lugar-info__tipo">{tipo}</dd></div>}
+      </dl>
+    </div>
+  )
+}
+
+// Colores tenues por nivel socioeconómico (semáforo del barrio).
+const SEM_FILL = { VERDE: '#16a34a', AMARILLO: '#eab308', ROJO: '#dc2626' }
+
+// Capa con la delimitación de los barrios de Córdoba, coloreada por nivel
+// socioeconómico con baja opacidad para no opacar el mapa base.
+function BarriosLayer() {
+  const map = useMap()
+  useEffect(() => {
+    if (!map || !window.google?.maps) return undefined
+    const layer = new window.google.maps.Data({ map })
+    layer.setStyle((feature) => {
+      const color = SEM_FILL[feature.getProperty('semaforo')] || '#94a3b8'
+      return {
+        fillColor: color,
+        fillOpacity: 0.18,
+        strokeColor: color,
+        strokeWeight: 1,
+        strokeOpacity: 0.45,
+        clickable: false, // deja pasar el clic al mapa para seleccionar el punto
+      }
+    })
+    let activo = true
+    api
+      .get('/catalog/barrios/')
+      .then(({ data }) => { if (activo) layer.addGeoJson(data) })
+      .catch(() => {})
+    return () => {
+      activo = false
+      layer.setMap(null)
+    }
+  }, [map])
+  return null
 }
 
 function Recenter({ position }) {
@@ -47,8 +102,7 @@ function RadiusCircle({ position, radius }) {
       strokeColor: '#dc2626',
       strokeOpacity: 0.9,
       strokeWeight: 2,
-      fillColor: '#dc2626',
-      fillOpacity: 0.08,
+      fillOpacity: 0, // sin relleno: se ve el mapa dentro del radio
       clickable: false,
     })
     circleRef.current = circle
@@ -80,12 +134,14 @@ export default function AnalysisPage() {
   const [validacion, setValidacion] = useState(null)
   const [direccion, setDireccion] = useState('')
   const [geocodificando, setGeocodificando] = useState(false)
+  const [mostrarBarrio, setMostrarBarrio] = useState(false)
   const [query, setQuery] = useState('')
   const [resultados, setResultados] = useState([])
   const [buscando, setBuscando] = useState(false)
 
   const [analizando, setAnalizando] = useState(false)
   const [resultado, setResultado] = useState(null)
+  const [lugarSel, setLugarSel] = useState(null) // índice del lugar abierto en el InfoWindow
   const [errorAnalisis, setErrorAnalisis] = useState('')
 
   const { isAuthenticated } = useAuth()
@@ -100,6 +156,7 @@ export default function AnalysisPage() {
   const seleccionar = async (lat, lng) => {
     setPosition({ lat, lng })
     setResultado(null)
+    setLugarSel(null)
     setErrorAnalisis('')
     setGuardado(null)
     setErrorGuardar('')
@@ -115,8 +172,10 @@ export default function AnalysisPage() {
     try {
       const { data } = await api.post('/catalog/validar-ubicacion/', { lat, lng })
       setValidacion(data)
+      setMostrarBarrio(Boolean(data.barrio))
     } catch {
       setValidacion({ dentro_de_cordoba: false, mensaje: 'No se pudo validar la ubicación.' })
+      setMostrarBarrio(false)
     }
   }
 
@@ -147,6 +206,7 @@ export default function AnalysisPage() {
     if (!puedeAnalizar) return
     setAnalizando(true)
     setResultado(null)
+    setLugarSel(null)
     setErrorAnalisis('')
     setGuardado(null)
     setErrorGuardar('')
@@ -256,15 +316,37 @@ export default function AnalysisPage() {
               gestureHandling="greedy"
               clickableIcons={false}
               onClick={(ev) => {
+                // Con un InfoWindow abierto, el clic en el mapa sólo lo cierra
+                // (no re-selecciona la ubicación analizada).
+                if (lugarSel != null) {
+                  setLugarSel(null)
+                  return
+                }
                 const ll = ev.detail?.latLng
                 if (ll) seleccionar(ll.lat, ll.lng)
               }}
             >
+              <BarriosLayer />
               {position && <Marker position={position} />}
               <RadiusCircle position={position} radius={RADIO_METROS} />
               {resultado?.lugares?.map((l, i) => (
-                <Marker key={i} position={{ lat: l.lat, lng: l.lng }} icon={markerIcon(l.competidor)} />
+                <Marker
+                  key={i}
+                  position={{ lat: l.lat, lng: l.lng }}
+                  icon={markerIcon(l.competidor)}
+                  clickable={l.competidor} // sólo los competidores muestran detalle
+                  onClick={l.competidor ? () => setLugarSel(i) : undefined}
+                />
               ))}
+              {lugarSel != null && resultado?.lugares?.[lugarSel]?.competidor && (
+                <InfoWindow
+                  position={{ lat: resultado.lugares[lugarSel].lat, lng: resultado.lugares[lugarSel].lng }}
+                  onCloseClick={() => setLugarSel(null)}
+                  headerDisabled // sin header ni ×: se cierra clickeando fuera del recuadro
+                >
+                  <LugarInfo lugar={resultado.lugares[lugarSel]} />
+                </InfoWindow>
+              )}
               <Recenter position={position} />
             </Map>
           </APIProvider>
@@ -272,6 +354,19 @@ export default function AnalysisPage() {
           <div className="analysis__map-missing">
             Falta configurar <code>VITE_GOOGLE_MAPS_API_KEY</code> en <code>frontend/.env</code>.
           </div>
+        )}
+
+        {GOOGLE_MAPS_API_KEY && (
+          <div className="barrios-legend">
+            <strong>Nivel socioeconómico</strong>
+            <span><i className="sq sq--verde" /> Alto</span>
+            <span><i className="sq sq--amarillo" /> Medio</span>
+            <span><i className="sq sq--rojo" /> Bajo</span>
+          </div>
+        )}
+
+        {mostrarBarrio && validacion?.barrio && (
+          <BarrioInfoCard barrio={validacion.barrio} onClose={() => setMostrarBarrio(false)} />
         )}
 
         {resultado ? (
@@ -283,6 +378,44 @@ export default function AnalysisPage() {
           <div className="analysis__map-hint">Hacé clic en el mapa para seleccionar una ubicación</div>
         )}
       </div>
+    </div>
+  )
+}
+
+const SEM_DOT = { VERDE: '#16a34a', AMARILLO: '#eab308', ROJO: '#dc2626' }
+const fmtNum = (n) => (n == null ? '—' : Math.round(n).toLocaleString('es-AR'))
+
+// Mini-ventana (abajo a la derecha del mapa) con los datos del barrio donde
+// cae la ubicación marcada.
+function BarrioInfoCard({ barrio, onClose }) {
+  return (
+    <div className="barrio-card">
+      <button className="barrio-card__close" onClick={onClose} title="Cerrar">✕</button>
+      <header className="barrio-card__head">
+        <span className="barrio-card__dot" style={{ background: SEM_DOT[barrio.semaforo] || '#94a3b8' }} />
+        <div>
+          <strong>{barrio.nombre}</strong>
+          {barrio.seccional && <small>Seccional {barrio.seccional}</small>}
+        </div>
+      </header>
+      <dl className="barrio-card__grid">
+        <div>
+          <dt>Nivel socioeconómico</dt>
+          <dd>{barrio.indice_socioeconomico || '—'}{barrio.ips ? ` · IPS ${barrio.ips}/5` : ''}</dd>
+        </div>
+        <div>
+          <dt>Habitantes</dt>
+          <dd>{fmtNum(barrio.cantidad_habitantes)}</dd>
+        </div>
+        <div>
+          <dt>Densidad</dt>
+          <dd>{fmtNum(barrio.densidad_hab_km2)} hab/km²</dd>
+        </div>
+        <div>
+          <dt>Hogares</dt>
+          <dd>{fmtNum(barrio.total_hogares)}</dd>
+        </div>
+      </dl>
     </div>
   )
 }

@@ -11,6 +11,7 @@ vi.mock('@vis.gl/react-google-maps', () => ({
   APIProvider: ({ children }) => children,
   Map: () => null,
   Marker: () => null,
+  InfoWindow: () => null,
   useMap: () => null,
 }))
 
@@ -100,5 +101,25 @@ describe('AnalysisPage · geocodificación inversa', () => {
 
     expect(await screen.findByText('Ubicación válida')).toBeInTheDocument()
     expect(screen.getByText(/-31\.42000, -64\.19000/)).toBeInTheDocument()
+  })
+
+  it('despliega la mini-ventana con datos del barrio del punto', async () => {
+    api.post.mockResolvedValue({
+      data: {
+        dentro_de_cordoba: true,
+        mensaje: 'Ubicación válida',
+        barrio: {
+          nombre: 'GÜEMES', seccional: '10', semaforo: 'AMARILLO',
+          indice_socioeconomico: 'Medio', ips: 4,
+          cantidad_habitantes: 11588, total_hogares: 5336, densidad_hab_km2: 9799.6,
+        },
+      },
+    })
+    renderPage()
+    await seleccionarUbicacion()
+
+    expect(await screen.findByText('GÜEMES')).toBeInTheDocument()
+    expect(screen.getByText(/Medio · IPS 4\/5/)).toBeInTheDocument()
+    expect(screen.getByText(/11\.588/)).toBeInTheDocument() // habitantes con separador es-AR
   })
 })

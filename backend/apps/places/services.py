@@ -59,6 +59,7 @@ def _nearby(lat, lng, radius, place_type=None):
                 "lng": loc["lng"],
                 "tipos": p.get("types", []),
                 "resenas": p.get("user_ratings_total") or 0,
+                "rating": p.get("rating"),
             })
 
         token = data.get("next_page_token")
