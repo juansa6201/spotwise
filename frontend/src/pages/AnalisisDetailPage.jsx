@@ -121,6 +121,10 @@ export default function AnalisisDetailPage() {
   const punto = { lat: analisis.latitud, lng: analisis.longitud }
   const scorePorTipo = Object.fromEntries(analisis.indicadores.map((i) => [i.tipo, i.score]))
 
+  // Dirección persistida al guardar; coordenadas como fallback.
+  const ubicacionTexto =
+    analisis.direccion || `${punto.lat.toFixed(5)}, ${punto.lng.toFixed(5)}`
+
   return (
     <div className="detail">
       <Link to="/mis-analisis" className="detail__back">← Mis Análisis</Link>
@@ -142,7 +146,7 @@ export default function AnalisisDetailPage() {
             {analisis.rubro_nombre || 'Sin rubro'} · Barrio <strong>{analisis.barrio_nombre || '—'}</strong>
           </p>
           <p className="detail__coords">
-            {punto.lat.toFixed(5)}, {punto.lng.toFixed(5)} · guardado el {fmtFecha(analisis.guardado_at)}
+            {ubicacionTexto} · guardado el {fmtFecha(analisis.guardado_at)}
           </p>
           <button
             className={`detail__fav ${analisis.favorito ? 'is-on' : ''}`}
