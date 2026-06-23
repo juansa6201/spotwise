@@ -34,16 +34,18 @@ class NearbyTest(TestCase):
             "status": "OK",
             "results": [
                 {"name": "A", "geometry": {"location": {"lat": LAT, "lng": LNG}},
-                 "types": ["restaurant"], "user_ratings_total": 120},
+                 "types": ["restaurant"], "user_ratings_total": 120, "rating": 4.5},
                 {"name": "B", "geometry": {"location": {"lat": LAT, "lng": LNG}},
-                 "types": ["cafe"]},  # sin user_ratings_total -> 0
+                 "types": ["cafe"]},  # sin user_ratings_total -> 0, sin rating -> None
             ],
         }
         with patch.object(services.requests, "get", return_value=FakeResp(data)):
             res = services._nearby(LAT, LNG, 500, place_type="restaurant")
         self.assertEqual(len(res), 2)
         self.assertEqual(res[0]["resenas"], 120)
+        self.assertEqual(res[0]["rating"], 4.5)
         self.assertEqual(res[1]["resenas"], 0)
+        self.assertIsNone(res[1]["rating"])
 
     def test_zero_results_devuelve_vacio(self):
         with patch.object(services.requests, "get", return_value=FakeResp({"status": "ZERO_RESULTS"})):
