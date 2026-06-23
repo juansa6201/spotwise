@@ -1,10 +1,17 @@
+import json
+
+from django.contrib.gis.geos import Point
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Rubro
-from .serializers import RubroSerializer
+from .models import Barrio, Rubro
+from .serializers import BarrioResumenSerializer, RubroSerializer
 from .services import esta_en_cordoba, geocodificar
+
+# Tolerancia de simplificación de los polígonos (en grados, ~11 m). Reduce el
+# tamaño del payload sin alterar de forma visible la delimitación en el mapa.
+SIMPLIFY_TOLERANCIA = 0.0001
 
 
 class RubroListView(generics.ListAPIView):
@@ -13,6 +20,37 @@ class RubroListView(generics.ListAPIView):
     queryset = Rubro.objects.all()
     serializer_class = RubroSerializer
     permission_classes = [permissions.AllowAny]
+
+
+class BarriosGeoJSONView(APIView):
+    """
+    Devuelve los barrios de Córdoba como GeoJSON FeatureCollection para dibujar
+    su delimitación en el mapa, con el nivel socioeconómico en las propiedades.
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        barrios = (
+            Barrio.objects
+            .exclude(poligono__isnull=True)
+            .only("id", "nombre", "semaforo", "indice_socioeconomico", "ips", "poligono")
+        )
+        features = []
+        for b in barrios:
+            geom = b.poligono.simplify(SIMPLIFY_TOLERANCIA, preserve_topology=True)
+            features.append({
+                "type": "Feature",
+                "geometry": json.loads(geom.geojson),
+                "properties": {
+                    "id": str(b.id),
+                    "nombre": b.nombre,
+                    "semaforo": b.semaforo,
+                    "indice_socioeconomico": b.indice_socioeconomico,
+                    "ips": b.ips,
+                },
+            })
+        return Response({"type": "FeatureCollection", "features": features})
 
 
 class ValidarUbicacionView(APIView):
@@ -31,10 +69,14 @@ class ValidarUbicacionView(APIView):
             )
 
         dentro = esta_en_cordoba(lat, lng)
+        barrio = Barrio.objects.filter(
+            poligono__contains=Point(lng, lat, srid=4326)
+        ).first()
         return Response({
             "lat": lat,
             "lng": lng,
             "dentro_de_cordoba": dentro,
+            "barrio": BarrioResumenSerializer(barrio).data if barrio else None,
             "mensaje": (
                 "Ubicación válida dentro de la ciudad de Córdoba."
                 if dentro
