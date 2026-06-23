@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { APIProvider, Map, Marker, useMap } from '@vis.gl/react-google-maps'
 import api from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
-import { COLOR_DECISION, LABEL_DECISION, nivelActividad, nivelCompetencia } from '../utils/score.js'
+import { COLOR_DECISION, LABEL_DECISION } from '../utils/score.js'
+import IndicadoresAnalisis from '../components/IndicadoresAnalisis.jsx'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 const CORDOBA_CENTER = { lat: -31.4201, lng: -64.1888 }
@@ -248,7 +249,6 @@ function ProcessingPanel() {
 
 function ResultPanel({ r, rubro, autenticado, onGuardar, guardando, guardado, errorGuardar }) {
   const color = COLOR_DECISION[r.decision] || '#64748b'
-  const dens = r.barrio?.densidad_hab_km2
   const [nombre, setNombre] = useState('')
   return (
     <div className="result">
@@ -266,16 +266,13 @@ function ResultPanel({ r, rubro, autenticado, onGuardar, guardando, guardado, er
         {rubro ? `${rubro} · ` : ''}Barrio <strong>{r.barrio?.nombre || '—'}</strong>
       </p>
 
-      <div className="result__indicators">
-        <Indicador label="Actividad comercial"
-          value={nivelActividad(r.indicadores.actividad_economica)} bar={r.indicadores.actividad_economica} />
-        <Indicador label="Competencia del rubro"
-          value={nivelCompetencia(r.competencia.competidores_directos)} bar={100 - r.indicadores.competencia} />
-        <Indicador label="Densidad poblacional"
-          value={dens ? `${Math.round(dens).toLocaleString('es-AR')} hab/km²` : '—'} />
-        <Indicador label="Índice socioeconómico"
-          value={r.barrio?.indice_socioeconomico || '—'} semaforo={r.barrio?.semaforo} />
-      </div>
+      <IndicadoresAnalisis
+        actividadScore={r.indicadores.actividad_economica}
+        competenciaScore={r.indicadores.competencia}
+        densidad={r.barrio?.densidad_hab_km2}
+        indiceSocioeconomico={r.barrio?.indice_socioeconomico}
+        semaforo={r.barrio?.semaforo}
+      />
 
       <p className="result__counts">
         {r.competencia.competidores_directos} competidores directos · {r.competencia.comercios_totales} comercios en {r.radio_m} m
@@ -310,19 +307,6 @@ function ResultPanel({ r, rubro, autenticado, onGuardar, guardando, guardado, er
           </>
         )}
       </div>
-    </div>
-  )
-}
-
-function Indicador({ label, value, bar, semaforo }) {
-  const semColor = { ROJO: '#dc2626', AMARILLO: '#d97706', VERDE: '#16a34a' }[semaforo]
-  return (
-    <div className="ind">
-      <span className="ind__label">{label}</span>
-      <strong className="ind__value" style={semColor ? { color: semColor } : undefined}>{value}</strong>
-      {bar != null && (
-        <div className="ind__bar"><div style={{ width: `${Math.max(0, Math.min(100, bar))}%` }} /></div>
-      )}
     </div>
   )
 }

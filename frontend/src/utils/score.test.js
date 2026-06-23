@@ -4,6 +4,7 @@ import {
   LABEL_DECISION,
   nivelActividad,
   nivelCompetencia,
+  nivelCompetenciaScore,
 } from './score.js'
 
 describe('nivelActividad', () => {
@@ -25,6 +26,17 @@ describe('nivelCompetencia', () => {
     expect(nivelCompetencia(4)).toBe('Moderada')
     expect(nivelCompetencia(2)).toBe('Baja')
     expect(nivelCompetencia(0)).toBe('Baja')
+  })
+})
+
+describe('nivelCompetenciaScore', () => {
+  it('deriva el nivel del indicador 0-100 (inverso al de competidores)', () => {
+    expect(nivelCompetenciaScore(0)).toBe('Alta')
+    expect(nivelCompetenciaScore(33.3)).toBe('Alta')
+    expect(nivelCompetenciaScore(40)).toBe('Moderada')
+    expect(nivelCompetenciaScore(73.3)).toBe('Moderada')
+    expect(nivelCompetenciaScore(80)).toBe('Baja')
+    expect(nivelCompetenciaScore(100)).toBe('Baja')
   })
 })
 
