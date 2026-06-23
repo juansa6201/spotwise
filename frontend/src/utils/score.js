@@ -13,3 +13,8 @@ export const nivelActividad = (v) => (v >= 66 ? 'Alta' : v >= 33 ? 'Moderada' : 
 
 // Nivel de competencia a partir de la cantidad de competidores directos.
 export const nivelCompetencia = (n) => (n >= 10 ? 'Alta' : n >= 4 ? 'Moderada' : 'Baja')
+
+// Nivel de competencia a partir del indicador 0-100 (inverso: score alto = poca
+// competencia). Equivale a nivelCompetencia sobre el conteo, pero a partir del
+// score persistido — así el análisis y el detalle muestran lo mismo.
+export const nivelCompetenciaScore = (s) => (s < 34 ? 'Alta' : s < 74 ? 'Moderada' : 'Baja')

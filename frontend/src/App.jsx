@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage.jsx'
 import RegisterPage from './pages/RegisterPage.jsx'
 import AnalysisPage from './pages/AnalysisPage.jsx'
 import MisAnalisisPage from './pages/MisAnalisisPage.jsx'
+import AnalisisDetailPage from './pages/AnalisisDetailPage.jsx'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/registro" element={<RegisterPage />} />
           <Route path="/analisis" element={<AnalysisPage />} />
           <Route path="/mis-analisis" element={<MisAnalisisPage />} />
+          <Route path="/mis-analisis/:id" element={<AnalisisDetailPage />} />
         </Routes>
       </main>
     </>

@@ -1,9 +1,10 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
 
   const handleLogout = () => {
     logout()
@@ -36,11 +37,11 @@ export default function Navbar() {
             Salir
           </button>
         </div>
-      ) : (
+      ) : pathname !== '/' ? (
         <Link to="/login" className="btn btn--ghost btn--sm">
           Iniciar sesión
         </Link>
-      )}
+      ) : null}
     </header>
   )
 }

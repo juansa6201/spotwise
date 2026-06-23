@@ -91,28 +91,30 @@ export default function MisAnalisisPage() {
         <ul className="saved__list">
           {items.map((it) => (
             <li key={it.id} className="saved__card">
-              <div
-                className="saved__score"
-                style={{ color: COLOR_DECISION[it.decision] || '#64748b' }}
-              >
-                {Math.round(it.score)}
-                <small>/100</small>
-              </div>
-
-              <div className="saved__body">
-                <h3>{it.nombre_referencia || 'Análisis sin nombre'}</h3>
-                <p className="saved__meta">
-                  {it.rubro_nombre || 'Sin rubro'} · {it.barrio_nombre || 'Fuera de barrio'} ·{' '}
-                  {fmtFecha(it.guardado_at)}
-                </p>
-                {it.notas && <p className="saved__notas">{it.notas}</p>}
-                <span
-                  className="saved__badge"
-                  style={{ background: COLOR_DECISION[it.decision] || '#64748b' }}
+              <Link to={`/mis-analisis/${it.id}`} className="saved__link">
+                <div
+                  className="saved__score"
+                  style={{ color: COLOR_DECISION[it.decision] || '#64748b' }}
                 >
-                  {it.decision_display}
-                </span>
-              </div>
+                  {Math.round(it.score)}
+                  <small>/100</small>
+                </div>
+
+                <div className="saved__body">
+                  <h3>{it.nombre_referencia || 'Análisis sin nombre'}</h3>
+                  <p className="saved__meta">
+                    {it.rubro_nombre || 'Sin rubro'} · {it.barrio_nombre || 'Fuera de barrio'} ·{' '}
+                    {fmtFecha(it.guardado_at)}
+                  </p>
+                  {it.notas && <p className="saved__notas">{it.notas}</p>}
+                  <span
+                    className="saved__badge"
+                    style={{ background: COLOR_DECISION[it.decision] || '#64748b' }}
+                  >
+                    {it.decision_display}
+                  </span>
+                </div>
+              </Link>
 
               <div className="saved__actions">
                 <button
