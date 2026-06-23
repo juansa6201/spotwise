@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { APIProvider, Map, Marker, useMap } from '@vis.gl/react-google-maps'
 import api from '../api/client.js'
@@ -8,6 +8,7 @@ import IndicadoresAnalisis from '../components/IndicadoresAnalisis.jsx'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 const CORDOBA_CENTER = { lat: -31.4201, lng: -64.1888 }
+const RADIO_METROS = 500 // radio de análisis predefinido (coincide con el backend)
 
 function markerIcon(competidor) {
   if (!window.google) return undefined
@@ -21,6 +22,17 @@ function markerIcon(competidor) {
   }
 }
 
+// Arma "Calle Número" a partir de un resultado de geocodificación de Google.
+function direccionCalleNumero(result) {
+  const comp = result.address_components || []
+  const buscar = (tipo) => comp.find((c) => c.types.includes(tipo))?.long_name
+  const calle = buscar('route')
+  const numero = buscar('street_number')
+  if (calle && numero) return `${calle} ${numero}`
+  if (calle) return calle
+  return (result.formatted_address || '').split(',')[0]
+}
+
 function Recenter({ position }) {
   const map = useMap()
   useEffect(() => {
@@ -32,11 +44,51 @@ function Recenter({ position }) {
   return null
 }
 
+// Círculo rojo que delimita el radio de análisis alrededor de la ubicación.
+// @vis.gl/react-google-maps no expone un componente Circle, así que se maneja
+// la instancia nativa de google.maps.Circle vía useMap().
+function RadiusCircle({ position, radius }) {
+  const map = useMap()
+  const circleRef = useRef(null)
+
+  useEffect(() => {
+    if (!map || !window.google?.maps) return undefined
+    const circle = new window.google.maps.Circle({
+      strokeColor: '#dc2626',
+      strokeOpacity: 0.9,
+      strokeWeight: 2,
+      fillColor: '#dc2626',
+      fillOpacity: 0.08,
+      clickable: false,
+    })
+    circleRef.current = circle
+    return () => {
+      circle.setMap(null)
+      circleRef.current = null
+    }
+  }, [map])
+
+  useEffect(() => {
+    const circle = circleRef.current
+    if (!circle) return
+    if (position) {
+      circle.setRadius(radius)
+      circle.setCenter(position)
+      circle.setMap(map)
+    } else {
+      circle.setMap(null)
+    }
+  }, [map, position, radius])
+
+  return null
+}
+
 export default function AnalysisPage() {
   const [rubros, setRubros] = useState([])
   const [rubroId, setRubroId] = useState('')
   const [position, setPosition] = useState(null) // { lat, lng }
   const [validacion, setValidacion] = useState(null)
+  const [direccion, setDireccion] = useState('')
   const [query, setQuery] = useState('')
   const [resultados, setResultados] = useState([])
   const [buscando, setBuscando] = useState(false)
@@ -60,6 +112,13 @@ export default function AnalysisPage() {
     setErrorAnalisis('')
     setGuardado(null)
     setErrorGuardar('')
+    setDireccion('')
+    // Geocodificación inversa: traduce el punto a "calle y número".
+    if (window.google?.maps) {
+      new window.google.maps.Geocoder().geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === 'OK' && results?.[0]) setDireccion(direccionCalleNumero(results[0]))
+      })
+    }
     try {
       const { data } = await api.post('/catalog/validar-ubicacion/', { lat, lng })
       setValidacion(data)
@@ -167,7 +226,9 @@ export default function AnalysisPage() {
         {position && validacion && !resultado && !analizando && (
           <div className={`analysis__validation ${validacion.dentro_de_cordoba ? 'is-ok' : 'is-err'}`}>
             {validacion.mensaje}
-            <div className="analysis__coords">{position.lat.toFixed(5)}, {position.lng.toFixed(5)}</div>
+            <div className="analysis__coords">
+              {direccion || `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`}
+            </div>
           </div>
         )}
 
@@ -206,6 +267,7 @@ export default function AnalysisPage() {
               }}
             >
               {position && <Marker position={position} />}
+              <RadiusCircle position={position} radius={RADIO_METROS} />
               {resultado?.lugares?.map((l, i) => (
                 <Marker key={i} position={{ lat: l.lat, lng: l.lng }} icon={markerIcon(l.competidor)} />
               ))}
