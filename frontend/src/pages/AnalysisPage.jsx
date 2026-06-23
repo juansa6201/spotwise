@@ -5,6 +5,7 @@ import api from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { COLOR_DECISION, LABEL_DECISION } from '../utils/score.js'
 import IndicadoresAnalisis from '../components/IndicadoresAnalisis.jsx'
+import { direccionCalleNumero } from '../utils/geo.js'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 const CORDOBA_CENTER = { lat: -31.4201, lng: -64.1888 }
@@ -20,17 +21,6 @@ function markerIcon(competidor) {
     strokeColor: '#ffffff',
     strokeWeight: 1.2,
   }
-}
-
-// Arma "Calle Número" a partir de un resultado de geocodificación de Google.
-function direccionCalleNumero(result) {
-  const comp = result.address_components || []
-  const buscar = (tipo) => comp.find((c) => c.types.includes(tipo))?.long_name
-  const calle = buscar('route')
-  const numero = buscar('street_number')
-  if (calle && numero) return `${calle} ${numero}`
-  if (calle) return calle
-  return (result.formatted_address || '').split(',')[0]
 }
 
 function Recenter({ position }) {
@@ -89,6 +79,7 @@ export default function AnalysisPage() {
   const [position, setPosition] = useState(null) // { lat, lng }
   const [validacion, setValidacion] = useState(null)
   const [direccion, setDireccion] = useState('')
+  const [geocodificando, setGeocodificando] = useState(false)
   const [query, setQuery] = useState('')
   const [resultados, setResultados] = useState([])
   const [buscando, setBuscando] = useState(false)
@@ -115,8 +106,10 @@ export default function AnalysisPage() {
     setDireccion('')
     // Geocodificación inversa: traduce el punto a "calle y número".
     if (window.google?.maps) {
+      setGeocodificando(true)
       new window.google.maps.Geocoder().geocode({ location: { lat, lng } }, (results, status) => {
         if (status === 'OK' && results?.[0]) setDireccion(direccionCalleNumero(results[0]))
+        setGeocodificando(false)
       })
     }
     try {
@@ -179,6 +172,7 @@ export default function AnalysisPage() {
         lng: resultado.lng,
         rubro_id: resultado.rubro.id,
         nombre_referencia: nombreReferencia,
+        direccion,
       })
       setGuardado(data)
     } catch (err) {
@@ -227,7 +221,7 @@ export default function AnalysisPage() {
           <div className={`analysis__validation ${validacion.dentro_de_cordoba ? 'is-ok' : 'is-err'}`}>
             {validacion.mensaje}
             <div className="analysis__coords">
-              {direccion || `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`}
+              {direccion || (geocodificando ? 'Buscando dirección…' : `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`)}
             </div>
           </div>
         )}

@@ -117,6 +117,7 @@ class GuardadosView(generics.ListCreateAPIView):
                 favorito=bool(request.data.get("favorito", False)),
                 latitud=lat,
                 longitud=lng,
+                direccion=(request.data.get("direccion") or "").strip()[:255],
                 score=resultado["score"],
                 decision=resultado["decision"],
             )

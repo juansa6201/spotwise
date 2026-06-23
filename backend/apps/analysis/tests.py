@@ -178,11 +178,12 @@ class GuardadosEndpointTest(APITestCase):
                               poligono=_multipoligono(LNG, LAT))
         self.url = "/api/analysis/guardados/"
 
-    def _guardar(self):
+    def _guardar(self, **extra):
         with patch.object(scoring, "analizar_zona", return_value=_zona(1, 8, 1200)):
             return self.client.post(self.url, {
                 "lat": LAT, "lng": LNG, "rubro_id": str(self.rubro.id),
                 "nombre_referencia": "Local centro",
+                **extra,
             })
 
     def test_listar_sin_token_da_401(self):
@@ -198,6 +199,20 @@ class GuardadosEndpointTest(APITestCase):
         # 3 indicadores (poblacional, actividad, competencia) persistidos
         self.assertEqual(analisis.indicadores.count(), 3)
         self.assertEqual(resp.data["barrio_nombre"], "Centro")
+
+    def test_guarda_la_direccion_y_la_devuelve(self):
+        self.client.force_authenticate(self.user)
+        resp = self._guardar(direccion="Avenida Colón 1000")
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.data["direccion"], "Avenida Colón 1000")
+        analisis = AnalisisGuardado.objects.get(usuario=self.user)
+        self.assertEqual(analisis.direccion, "Avenida Colón 1000")
+
+    def test_guardar_sin_direccion_queda_vacia(self):
+        self.client.force_authenticate(self.user)
+        resp = self._guardar()
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.data["direccion"], "")
 
     def test_solo_lista_los_propios(self):
         AnalisisGuardado.objects.create(usuario=self.otro, rubro=self.rubro,

@@ -33,11 +33,11 @@ class AnalisisGuardadoSerializer(serializers.ModelSerializer):
         model = AnalisisGuardado
         fields = [
             "id", "nombre_referencia", "notas", "favorito",
-            "latitud", "longitud", "score", "decision", "decision_display",
+            "latitud", "longitud", "direccion", "score", "decision", "decision_display",
             "rubro_id", "rubro_nombre", "barrio_nombre",
             "barrio_densidad", "barrio_indice_socioeconomico", "barrio_semaforo",
             "indicadores", "guardado_at",
         ]
         read_only_fields = [
-            "id", "latitud", "longitud", "score", "decision", "guardado_at",
+            "id", "latitud", "longitud", "direccion", "score", "decision", "guardado_at",
         ]

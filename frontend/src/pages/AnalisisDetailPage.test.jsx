@@ -19,7 +19,7 @@ import AnalisisDetailPage from './AnalisisDetailPage.jsx'
 
 const ANALISIS = {
   id: 'abc', nombre_referencia: 'Esquina Güemes', notas: 'Buena zona',
-  favorito: true, latitud: -31.42, longitud: -64.19,
+  favorito: true, latitud: -31.42, longitud: -64.19, direccion: 'Avenida Colón 1000',
   score: 72, decision: 'ALTA', decision_display: 'Alta viabilidad',
   rubro_nombre: 'Restaurante', barrio_nombre: 'GUEMES',
   barrio_densidad: 9799, barrio_indice_socioeconomico: 'Alto', barrio_semaforo: 'VERDE',
@@ -49,6 +49,7 @@ describe('AnalisisDetailPage', () => {
     renderPage()
     expect(await screen.findByText('Esquina Güemes')).toBeInTheDocument()
     expect(screen.getByText('Alta viabilidad')).toBeInTheDocument()
+    expect(screen.getByText(/Avenida Colón 1000/)).toBeInTheDocument()
     expect(screen.getByText('Competencia del rubro')).toBeInTheDocument()
     expect(screen.getByText('Actividad comercial')).toBeInTheDocument()
     expect(api.get).toHaveBeenCalledWith('/analysis/guardados/abc/')
