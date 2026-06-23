@@ -35,6 +35,7 @@ class AnalisisGuardado(models.Model):
 
     latitud = models.FloatField()
     longitud = models.FloatField()
+    direccion = models.CharField("dirección (calle y número)", max_length=255, blank=True)
 
     score = models.FloatField("score de viabilidad (0–100)")
     decision = models.CharField(max_length=10, choices=Decision.choices, blank=True)
