@@ -6,11 +6,14 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: true, // escucha en 0.0.0.0 para ser accesible dentro de Docker
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
+        // En Docker apunta al servicio backend; local, a localhost.
+        target: process.env.API_PROXY_TARGET || 'http://localhost:8000',
+        // changeOrigin false: conserva el Host "localhost" (lo permite ALLOWED_HOSTS).
+        changeOrigin: false,
       },
     },
   },
