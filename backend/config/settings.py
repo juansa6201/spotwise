@@ -82,6 +82,8 @@ DATABASES = {
         "PASSWORD": env("POSTGRES_PASSWORD", default="spotwise"),
         "HOST": env("POSTGRES_HOST", default="localhost"),
         "PORT": env("POSTGRES_PORT", default="5432"),
+        # SSL: "prefer" en local (cae a sin cifrar) y "require" en RDS (lo exige).
+        "OPTIONS": {"sslmode": env("POSTGRES_SSLMODE", default="prefer")},
     }
 }
 
