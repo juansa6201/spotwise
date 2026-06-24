@@ -42,6 +42,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # Sirve los estáticos del admin/DRF en producción (gunicorn) sin un nginx aparte.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -112,7 +114,23 @@ USE_TZ = True
 # ---------------------------------------------------------------------------
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# WhiteNoise comprime los estáticos (sin manifest: no rompe en dev ni en tests).
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ---------------------------------------------------------------------------
+# Seguridad en producción (DEBUG=False detrás de un proxy que termina TLS)
+# ---------------------------------------------------------------------------
+CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
+if not DEBUG:
+    # nginx/ALB delante reenvía el esquema original en este header.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = env.bool("DJANGO_SECURE_SSL_REDIRECT", default=False)
+    SESSION_COOKIE_SECURE = env.bool("DJANGO_COOKIE_SECURE", default=False)
+    CSRF_COOKIE_SECURE = env.bool("DJANGO_COOKIE_SECURE", default=False)
 
 # ---------------------------------------------------------------------------
 # Django REST Framework + JWT

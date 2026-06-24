@@ -12,6 +12,7 @@ backend/media/
 # ---- Entorno ----
 .env
 .env.local
+.env.prod
 *.local
 
 # ---- Node / Frontend ----

@@ -19,7 +19,11 @@ services:
   backend:
     build: ./backend
     container_name: spotwise_backend
-    command: python manage.py runserver 0.0.0.0:8000
+    # Migra, importa los barrios (idempotente: update_or_create) y levanta el server.
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py importar_barrios &&
+             python manage.py runserver 0.0.0.0:8000"
     volumes:
       - ./backend:/app
     ports:
@@ -28,6 +32,21 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: spotwise_frontend
+    command: npm run dev
+    environment:
+      # El proxy /api de Vite apunta al servicio backend dentro de la red de compose.
+      API_PROXY_TARGET: http://backend:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # volumen anónimo: conserva los node_modules de la imagen
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
 
 volumes:
   pgdata:
