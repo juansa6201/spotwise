@@ -452,3 +452,46 @@ a.btn { display: inline-block; text-decoration: none; }
 .detail__ok { color: #15803d; font-size: 0.83rem; font-weight: 600; }
 .detail__delete { margin-top: 1.5rem; color: #b91c1c; border-color: #f1c2c2; }
 .detail__delete:hover { border-color: #b91c1c; background: #fef2f2; }
+
+/* ====================================================================== */
+/*  Responsive                                                            */
+/* ====================================================================== */
+
+/* --- Tablet y abajo: el análisis pasa a apilarse (sidebar arriba, mapa abajo) --- */
+@media (max-width: 860px) {
+  .analysis { flex-direction: column; height: auto; }
+  .analysis__sidebar {
+    width: 100%; flex-shrink: 1; border-right: none;
+    border-bottom: 1px solid var(--border); overflow-y: visible;
+  }
+  .analysis__map { flex: none; height: 60vh; min-height: 360px; }
+
+  /* Formularios de dos columnas pasan a una */
+  .field-row { grid-template-columns: 1fr; }
+}
+
+/* --- Teléfono: navbar compacta, paddings menores, tarjetas del mapa adaptadas --- */
+@media (max-width: 560px) {
+  .navbar { gap: 0.6rem; padding: 0.7rem 1rem; flex-wrap: wrap; }
+  .navbar__links { gap: 1rem; font-size: 0.9rem; margin: 0; order: 3; width: 100%; justify-content: center; }
+  .navbar__links a { font-size: 0.9rem; }
+  .navbar__user-name { display: none; }
+  .navbar__account { margin-left: auto; }
+
+  .home { padding: 2.5rem 1.25rem 2rem; }
+  .home__cards { margin-top: 2.5rem; }
+
+  .saved, .detail { margin-top: 1.5rem; }
+  .saved__card { gap: 0.75rem; padding: 0.85rem 0.9rem; }
+  .saved__score { width: 52px; font-size: 1.6rem; }
+  .saved__link { gap: 0.75rem; }
+
+  .detail__head { gap: 1rem; padding: 1rem; }
+  .detail__save-row { flex-wrap: wrap; }
+
+  /* Mapa: leyenda arriba-izquierda y mini-ventana del barrio a lo ancho abajo,
+     para que no se pisen en pantallas angostas. */
+  .barrios-legend { top: 8px; bottom: auto; left: 8px; }
+  .barrio-card { left: 8px; right: 8px; bottom: 8px; width: auto; }
+  .map-legend { top: 8px; right: 8px; }
+}
