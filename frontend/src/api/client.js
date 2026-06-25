@@ -1,4 +1,5 @@
 import axios from 'axios'
+import logger from '../utils/logger.js'
 
 export const ACCESS_KEY = 'sw_access'
 export const REFRESH_KEY = 'sw_refresh'
@@ -15,5 +16,20 @@ api.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
+
+// Loguea cualquier error de API (status + detalle del backend).
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const { config, response } = error
+    const metodo = config?.method?.toUpperCase()
+    logger.error(
+      `API ${metodo} ${config?.url} →`,
+      response?.status ?? 'sin respuesta',
+      response?.data ?? error.message,
+    )
+    return Promise.reject(error)
+  },
+)
 
 export default api
