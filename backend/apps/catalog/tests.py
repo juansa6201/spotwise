@@ -2,6 +2,7 @@
 from unittest.mock import patch
 
 from django.contrib.gis.geos import MultiPolygon, Polygon
+from django.core.cache import cache
 from rest_framework.test import APITestCase
 
 from apps.catalog.models import Barrio, Rubro
@@ -60,6 +61,10 @@ class ValidarUbicacionTest(APITestCase):
 class BarriosGeoJSONTest(APITestCase):
     url = "/api/catalog/barrios/"
 
+    def setUp(self):
+        # El cache (LocMemCache) persiste entre tests: se limpia para aislarlos.
+        cache.clear()
+
     def test_devuelve_featurecollection_con_props_socioeconomicas(self):
         Barrio.objects.create(
             nombre="Centro", semaforo="VERDE", indice_socioeconomico="Alto", ips=5,
@@ -78,6 +83,29 @@ class BarriosGeoJSONTest(APITestCase):
         self.assertEqual(feature["properties"]["nombre"], "Centro")
         self.assertEqual(feature["properties"]["semaforo"], "VERDE")
         self.assertEqual(feature["properties"]["indice_socioeconomico"], "Alto")
+
+    def test_cachea_la_respuesta_y_manda_cache_control(self):
+        Barrio.objects.create(
+            nombre="Centro", semaforo="VERDE", indice_socioeconomico="Alto", ips=5,
+            poligono=_multipoligono(-64.19, -31.42),
+        )
+        primera = self.client.get(self.url)
+        self.assertEqual(primera.status_code, 200)
+        self.assertIn("max-age", primera["Cache-Control"])
+
+        # Un barrio nuevo no aparece hasta que se invalida el cache (se sirve
+        # la respuesta cacheada).
+        Barrio.objects.create(
+            nombre="Nueva Córdoba", semaforo="VERDE", ips=5,
+            poligono=_multipoligono(-64.18, -31.43),
+        )
+        cacheada = self.client.get(self.url)
+        self.assertEqual(len(cacheada.data["features"]), 1)
+
+        # Tras invalidar, vuelve a construirse con los dos barrios.
+        cache.clear()
+        fresca = self.client.get(self.url)
+        self.assertEqual(len(fresca.data["features"]), 2)
 
 
 class GeocodeLoggingTest(APITestCase):
