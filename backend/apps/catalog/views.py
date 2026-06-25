@@ -1,4 +1,5 @@
 import json
+import logging
 
 from django.contrib.gis.geos import Point
 from rest_framework import generics, permissions, status
@@ -8,6 +9,8 @@ from rest_framework.views import APIView
 from .models import Barrio, Rubro
 from .serializers import BarrioResumenSerializer, RubroSerializer
 from .services import esta_en_cordoba, geocodificar
+
+logger = logging.getLogger(__name__)
 
 # Tolerancia de simplificación de los polígonos (en grados, ~11 m). Reduce el
 # tamaño del payload sin alterar de forma visible la delimitación en el mapa.
@@ -98,6 +101,7 @@ class GeocodeView(APIView):
         try:
             resultados = geocodificar(q)
         except Exception:
+            logger.exception("Error geocodificando la dirección %r", q)
             return Response(
                 {"detail": "No se pudo completar la búsqueda de la dirección en este momento."},
                 status=status.HTTP_502_BAD_GATEWAY,

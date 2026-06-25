@@ -133,6 +133,28 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = env.bool("DJANGO_COOKIE_SECURE", default=False)
 
 # ---------------------------------------------------------------------------
+# Logging (a stdout → visible con `docker compose logs`)
+# ---------------------------------------------------------------------------
+LOG_LEVEL = env("DJANGO_LOG_LEVEL", default="INFO")
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {"format": "{asctime} {levelname} {name}: {message}", "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
+    },
+    "root": {"handlers": ["console"], "level": LOG_LEVEL},
+    "loggers": {
+        # Errores de request (excepciones 500, etc.) con traceback.
+        "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+        # Logs de las apps del proyecto (apps.catalog, apps.places, ...).
+        "apps": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False},
+    },
+}
+
+# ---------------------------------------------------------------------------
 # Django REST Framework + JWT
 # ---------------------------------------------------------------------------
 REST_FRAMEWORK = {
