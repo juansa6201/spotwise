@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
@@ -11,6 +13,8 @@ from apps.places.services import PlacesError
 from . import scoring
 from .models import AnalisisGuardado, Indicador
 from .serializers import AnalisisGuardadoSerializer
+
+logger = logging.getLogger(__name__)
 
 # Mapea las claves del dict de scoring a los tipos del modelo Indicador.
 TIPO_POR_CLAVE = {
@@ -56,6 +60,7 @@ class AnalizarView(APIView):
         try:
             resultado = scoring.calcular(lat, lng, rubro)
         except PlacesError as exc:
+            logger.warning("Google Places falló en (%s, %s): %s", lat, lng, exc)
             return Response(
                 {"detail": f"No se pudieron obtener los datos comerciales: {exc}"},
                 status=502,
@@ -98,6 +103,7 @@ class GuardadosView(generics.ListCreateAPIView):
         try:
             resultado = scoring.calcular(lat, lng, rubro)
         except PlacesError as exc:
+            logger.warning("Google Places falló en (%s, %s): %s", lat, lng, exc)
             return Response(
                 {"detail": f"No se pudieron obtener los datos comerciales: {exc}"},
                 status=502,
