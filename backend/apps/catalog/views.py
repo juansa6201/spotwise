@@ -2,6 +2,7 @@ import json
 import logging
 
 from django.contrib.gis.geos import Point
+from django.core.cache import cache
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,6 +16,12 @@ logger = logging.getLogger(__name__)
 # Tolerancia de simplificación de los polígonos (en grados, ~11 m). Reduce el
 # tamaño del payload sin alterar de forma visible la delimitación en el mapa.
 SIMPLIFY_TOLERANCIA = 0.0001
+
+# Cache del GeoJSON de barrios: cambian rarísimo, así que se sirve desde memoria
+# y se deja cachear en el navegador para que la próxima carga sea instantánea.
+# El comando importar_barrios invalida esta clave al recargar los datos.
+BARRIOS_CACHE_KEY = "barrios_geojson_v1"
+BARRIOS_CACHE_TTL = 60 * 60 * 24  # 1 día
 
 
 class RubroListView(generics.ListAPIView):
@@ -34,6 +41,17 @@ class BarriosGeoJSONView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
+        data = cache.get(BARRIOS_CACHE_KEY)
+        if data is None:
+            data = self._construir_geojson()
+            cache.set(BARRIOS_CACHE_KEY, data, BARRIOS_CACHE_TTL)
+        response = Response(data)
+        # Que el navegador también lo cachee: la próxima carga no pega al backend.
+        response["Cache-Control"] = f"public, max-age={BARRIOS_CACHE_TTL}"
+        return response
+
+    @staticmethod
+    def _construir_geojson():
         barrios = (
             Barrio.objects
             .exclude(poligono__isnull=True)
@@ -53,7 +71,7 @@ class BarriosGeoJSONView(APIView):
                     "ips": b.ips,
                 },
             })
-        return Response({"type": "FeatureCollection", "features": features})
+        return {"type": "FeatureCollection", "features": features}
 
 
 class ValidarUbicacionView(APIView):

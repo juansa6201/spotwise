@@ -12,10 +12,12 @@ import xml.etree.ElementTree as ET
 
 from django.conf import settings
 from django.contrib.gis.geos import LinearRing, MultiPolygon, Polygon
+from django.core.cache import cache
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.catalog.models import Barrio
+from apps.catalog.views import BARRIOS_CACHE_KEY
 
 
 def _local(tag):
@@ -187,6 +189,10 @@ class Command(BaseCommand):
                 creados += 1
             else:
                 actualizados += 1
+
+        # Los barrios cambiaron: descarta el GeoJSON cacheado para no servir
+        # datos viejos hasta que venza el TTL.
+        cache.delete(BARRIOS_CACHE_KEY)
 
         total = Barrio.objects.count()
         self.stdout.write(self.style.SUCCESS(
