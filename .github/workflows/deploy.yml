@@ -70,7 +70,9 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: docker-compose.prod.yml
+          source: |
+            docker-compose.prod.yml
+            Caddyfile
           target: /opt/spotwise
 
       - name: Pull + up (con migraciones e import de barrios)

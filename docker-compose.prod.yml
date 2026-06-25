@@ -1,5 +1,6 @@
 # Producción (EC2): imágenes pre-construidas en GHCR, base en RDS (no hay
-# contenedor de DB). El frontend nginx publica el puerto 80 y proxea /api.
+# contenedor de DB). Caddy termina TLS (HTTPS) y reenvía al nginx del frontend,
+# que sirve el SPA y proxea /api al backend.
 services:
   backend:
     image: ghcr.io/juansa6201/spotwise/backend:${TAG:-latest}
@@ -19,5 +20,25 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+    # Ya no publica al exterior: solo Caddy lo alcanza por la red interna.
+    expose:
+      - "80"
+
+  # Reverse proxy con HTTPS automático (Let's Encrypt). Única puerta pública.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    env_file: .env.prod
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
