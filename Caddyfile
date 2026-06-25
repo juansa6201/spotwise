@@ -1,0 +1,7 @@
+# Caddy: termina TLS con certificado Let's Encrypt automático y reenvía el
+# tráfico al nginx del frontend. El dominio se toma de la variable DOMAIN del
+# .env.prod (ej: spotwise.duckdns.org). Caddy redirige http→https solo.
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy frontend:80
+}
