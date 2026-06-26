@@ -375,6 +375,17 @@ export default function AnalysisPage() {
         )}
       </aside>
 
+      {/* Referencias del semáforo arriba del mapa (solo en pantallas chicas;
+          en desktop se usa el cuadro flotante .barrios-legend). */}
+      {GOOGLE_MAPS_API_KEY && (
+        <div className="barrios-ref">
+          <span>Nivel socioeconómico:</span>
+          <span><i className="sq sq--verde" /> Alto</span>
+          <span><i className="sq sq--amarillo" /> Medio</span>
+          <span><i className="sq sq--rojo" /> Bajo</span>
+        </div>
+      )}
+
       <div className="analysis__map">
         {GOOGLE_MAPS_API_KEY ? (
             <Map

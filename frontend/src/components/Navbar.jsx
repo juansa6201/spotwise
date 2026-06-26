@@ -38,9 +38,11 @@ export default function Navbar() {
           </button>
         </div>
       ) : pathname !== '/' ? (
-        <Link to="/login" className="btn btn--ghost btn--sm">
-          Iniciar sesión
-        </Link>
+        <div className="navbar__account">
+          <Link to="/login" className="btn btn--ghost btn--sm">
+            Iniciar sesión
+          </Link>
+        </div>
       ) : null}
     </header>
   )

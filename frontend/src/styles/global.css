@@ -338,6 +338,19 @@ a.btn { display: inline-block; text-decoration: none; }
 .sq--amarillo { background: #eab308; }
 .sq--rojo { background: #dc2626; }
 
+/* Barra de referencias del semáforo arriba del mapa (solo en pantallas chicas). */
+.barrios-ref {
+  display: none; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: 0.4rem 1rem; padding: 0.55rem 0.75rem;
+  background: var(--card);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  font-size: 0.78rem; color: var(--muted);
+}
+.barrios-ref .sq {
+  display: inline-block; width: 11px; height: 11px; border-radius: 3px;
+  margin-right: 0.35rem; vertical-align: middle; opacity: 0.7;
+}
+
 /* ---------- Mini-ventana con datos del barrio ---------- */
 .barrio-card {
   position: absolute; bottom: 12px; right: 12px; z-index: 1000;
@@ -498,9 +511,29 @@ a.btn { display: inline-block; text-decoration: none; }
   .analysis { flex-direction: column; height: auto; }
   .analysis__sidebar {
     width: 100%; flex-shrink: 1; border-right: none;
-    border-bottom: 1px solid var(--border); overflow-y: visible;
+    border-bottom: none; overflow-y: visible;
   }
   .analysis__map { flex: none; height: 60vh; min-height: 360px; }
+
+  /* El cuadro flotante de nivel socioeconómico se reemplaza por la barra de
+     referencias arriba del mapa. */
+  .barrios-legend { display: none; }
+  .barrios-ref { display: flex; }
+
+  /* La mini-ventana del barrio se reduce a un chip centrado que muestra solo
+     el nombre y el punto del semáforo (mismo breakpoint que las referencias). */
+  .barrio-card {
+    left: 50%; right: auto; bottom: 8px; transform: translateX(-50%);
+    width: auto; max-width: 80vw; padding: 0.45rem 0.7rem;
+  }
+  .barrio-card__close { display: none; }
+  .barrio-card__grid { display: none; }
+  .barrio-card__head { margin-bottom: 0; padding-right: 0; min-width: 0; }
+  .barrio-card__head > div { min-width: 0; }
+  .barrio-card__head small { display: none; }
+  .barrio-card__head strong {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
 
   /* Formularios de dos columnas pasan a una */
   .field-row { grid-template-columns: 1fr; }
@@ -525,9 +558,5 @@ a.btn { display: inline-block; text-decoration: none; }
   .detail__head { gap: 1rem; padding: 1rem; }
   .detail__save-row { flex-wrap: wrap; }
 
-  /* Mapa: leyenda arriba-izquierda y mini-ventana del barrio a lo ancho abajo,
-     para que no se pisen en pantallas angostas. */
-  .barrios-legend { top: 8px; bottom: auto; left: 8px; }
-  .barrio-card { left: 8px; right: 8px; bottom: 8px; width: auto; }
   .map-legend { top: 8px; right: 8px; }
 }
