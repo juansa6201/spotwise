@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { APIProvider, InfoWindow, Map, Marker, useMap } from '@vis.gl/react-google-maps'
+import { APIProvider, InfoWindow, Map, Marker, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import api from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { COLOR_DECISION, LABEL_DECISION } from '../utils/score.js'
@@ -10,6 +10,8 @@ import { tipoPrincipal } from '../utils/places.js'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 const CORDOBA_CENTER = { lat: -31.4201, lng: -64.1888 }
+// Caja de la ciudad de Córdoba: sesga las sugerencias del autocompletado.
+const CORDOBA_BOUNDS = { north: -31.30, south: -31.55, east: -64.04, west: -64.36 }
 const RADIO_METROS = 500 // radio de análisis predefinido (coincide con el backend)
 
 function markerIcon(competidor) {
@@ -127,6 +129,109 @@ function RadiusCircle({ position, radius }) {
   return null
 }
 
+// Buscador de direcciones con el autocompletado de Google Places. Usa un
+// session token (predicciones + getDetails) para que Google lo facture como
+// una sola sesión. Sesga los resultados a Córdoba, Argentina.
+function BuscadorDireccion({ onElegir }) {
+  const places = useMapsLibrary('places')
+  const [texto, setTexto] = useState('')
+  const [predicciones, setPredicciones] = useState([])
+  const [buscando, setBuscando] = useState(false)
+  const [sinResultados, setSinResultados] = useState(false)
+
+  const autoServ = useRef(null) // AutocompleteService (predicciones)
+  const placesServ = useRef(null) // PlacesService (detalle → coordenadas)
+  const token = useRef(null) // session token de facturación
+  const saltar = useRef(false) // evita re-buscar al elegir un resultado
+
+  useEffect(() => {
+    if (!places) return
+    autoServ.current = new places.AutocompleteService()
+    placesServ.current = new places.PlacesService(document.createElement('div'))
+  }, [places])
+
+  useEffect(() => {
+    if (saltar.current) { saltar.current = false; return undefined }
+    const q = texto.trim()
+    setSinResultados(false)
+    if (q.length < 3 || !autoServ.current) {
+      setPredicciones([])
+      setBuscando(false)
+      return undefined
+    }
+    if (!token.current) token.current = new places.AutocompleteSessionToken()
+    setBuscando(true)
+    let activo = true
+    const t = setTimeout(() => {
+      autoServ.current.getPlacePredictions(
+        {
+          input: q,
+          sessionToken: token.current,
+          componentRestrictions: { country: 'ar' },
+          bounds: CORDOBA_BOUNDS,
+          language: 'es',
+        },
+        (preds, status) => {
+          if (!activo) return
+          const ok = status === places.PlacesServiceStatus.OK && preds?.length
+          setPredicciones(ok ? preds : [])
+          setSinResultados(!ok)
+          setBuscando(false)
+        },
+      )
+    }, 300)
+    return () => { activo = false; clearTimeout(t) }
+  }, [texto, places])
+
+  const elegir = (pred) => {
+    saltar.current = true
+    setTexto(pred.description)
+    setPredicciones([])
+    setSinResultados(false)
+    setBuscando(false)
+    placesServ.current.getDetails(
+      {
+        placeId: pred.place_id,
+        fields: ['geometry', 'address_components', 'formatted_address'],
+        sessionToken: token.current,
+      },
+      (place, status) => {
+        token.current = null // cierra la sesión de facturación
+        if (status === places.PlacesServiceStatus.OK && place?.geometry?.location) {
+          const loc = place.geometry.location
+          // Pasa la dirección elegida para mostrarla tal cual (sin re-geocodificar).
+          onElegir(loc.lat(), loc.lng(), direccionCalleNumero(place))
+        }
+      },
+    )
+  }
+
+  return (
+    <div className="analysis__search">
+      <label className="field">
+        <span>Ubicación</span>
+        <input
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          placeholder="Buscar dirección o zona…"
+          autoComplete="off"
+        />
+      </label>
+      {buscando && <p className="analysis__searching">Buscando direcciones…</p>}
+      {predicciones.length > 0 && (
+        <ul className="analysis__results">
+          {predicciones.map((p) => (
+            <li key={p.place_id} onClick={() => elegir(p)}>{p.description}</li>
+          ))}
+        </ul>
+      )}
+      {sinResultados && !buscando && (
+        <p className="analysis__searching">Sin resultados para “{texto.trim()}”.</p>
+      )}
+    </div>
+  )
+}
+
 export default function AnalysisPage() {
   const [rubros, setRubros] = useState([])
   const [rubroId, setRubroId] = useState('')
@@ -135,9 +240,6 @@ export default function AnalysisPage() {
   const [direccion, setDireccion] = useState('')
   const [geocodificando, setGeocodificando] = useState(false)
   const [mostrarBarrio, setMostrarBarrio] = useState(false)
-  const [query, setQuery] = useState('')
-  const [resultados, setResultados] = useState([])
-  const [buscando, setBuscando] = useState(false)
 
   const [analizando, setAnalizando] = useState(false)
   const [resultado, setResultado] = useState(null)
@@ -153,16 +255,18 @@ export default function AnalysisPage() {
     api.get('/catalog/rubros/').then(({ data }) => setRubros(data)).catch(() => setRubros([]))
   }, [])
 
-  const seleccionar = async (lat, lng) => {
+  const seleccionar = async (lat, lng, direccionConocida) => {
     setPosition({ lat, lng })
     setResultado(null)
     setLugarSel(null)
     setErrorAnalisis('')
     setGuardado(null)
     setErrorGuardar('')
-    setDireccion('')
-    // Geocodificación inversa: traduce el punto a "calle y número".
-    if (window.google?.maps) {
+    setDireccion(direccionConocida || '')
+    // Si la dirección la eligió el usuario en el buscador, se muestra tal cual.
+    // Solo se geocodifica inverso cuando se clickea un punto del mapa (sin texto):
+    // re-geocodificar la coordenada elegida devolvería un número de portal distinto.
+    if (!direccionConocida && window.google?.maps) {
       setGeocodificando(true)
       new window.google.maps.Geocoder().geocode({ location: { lat, lng } }, (results, status) => {
         if (status === 'OK' && results?.[0]) setDireccion(direccionCalleNumero(results[0]))
@@ -177,26 +281,6 @@ export default function AnalysisPage() {
       setValidacion({ dentro_de_cordoba: false, mensaje: 'No se pudo validar la ubicación.' })
       setMostrarBarrio(false)
     }
-  }
-
-  const buscarDireccion = async (e) => {
-    e.preventDefault()
-    if (query.trim().length < 3) return
-    setBuscando(true)
-    try {
-      const { data } = await api.get('/catalog/geocode/', { params: { q: query } })
-      setResultados(data.resultados || [])
-    } catch {
-      setResultados([])
-    } finally {
-      setBuscando(false)
-    }
-  }
-
-  const elegirResultado = (r) => {
-    setResultados([])
-    setQuery(r.nombre)
-    seleccionar(r.lat, r.lng)
   }
 
   const rubroSel = useMemo(() => rubros.find((r) => r.id === rubroId), [rubros, rubroId])
@@ -242,7 +326,7 @@ export default function AnalysisPage() {
     }
   }
 
-  return (
+  const contenido = (
     <div className="analysis">
       <aside className="analysis__sidebar">
         <div className="analysis__sidebar-head">
@@ -250,22 +334,7 @@ export default function AnalysisPage() {
           <p>Localización geoespacial</p>
         </div>
 
-        <form className="analysis__search" onSubmit={buscarDireccion}>
-          <label className="field">
-            <span>Ubicación</span>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar dirección o zona…" />
-          </label>
-          <button type="submit" className="btn btn--ghost btn--sm btn--block" disabled={buscando}>
-            {buscando ? 'Buscando…' : 'Buscar dirección'}
-          </button>
-          {resultados.length > 0 && (
-            <ul className="analysis__results">
-              {resultados.map((r, i) => (
-                <li key={i} onClick={() => elegirResultado(r)}>{r.nombre}</li>
-              ))}
-            </ul>
-          )}
-        </form>
+        <BuscadorDireccion onElegir={seleccionar} />
 
         <label className="field">
           <span>Categoría de negocio</span>
@@ -308,7 +377,6 @@ export default function AnalysisPage() {
 
       <div className="analysis__map">
         {GOOGLE_MAPS_API_KEY ? (
-          <APIProvider apiKey={GOOGLE_MAPS_API_KEY} language="es" region="AR">
             <Map
               style={{ width: '100%', height: '100%' }}
               defaultCenter={CORDOBA_CENTER}
@@ -349,7 +417,6 @@ export default function AnalysisPage() {
               )}
               <Recenter position={position} />
             </Map>
-          </APIProvider>
         ) : (
           <div className="analysis__map-missing">
             Falta configurar <code>VITE_GOOGLE_MAPS_API_KEY</code> en <code>frontend/.env</code>.
@@ -379,6 +446,16 @@ export default function AnalysisPage() {
         )}
       </div>
     </div>
+  )
+
+  // El APIProvider envuelve toda la pantalla para que el buscador del sidebar
+  // también pueda usar la librería de Google Places.
+  return GOOGLE_MAPS_API_KEY ? (
+    <APIProvider apiKey={GOOGLE_MAPS_API_KEY} language="es" region="AR">
+      {contenido}
+    </APIProvider>
+  ) : (
+    contenido
   )
 }
 
