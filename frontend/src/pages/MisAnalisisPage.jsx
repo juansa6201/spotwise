@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
@@ -14,11 +14,22 @@ const fmtFecha = (iso) => {
   }
 }
 
+// Valores únicos (no vacíos) de un campo, ordenados alfabéticamente.
+const distintos = (items, campo) =>
+  [...new Set(items.map((it) => it[campo]).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'es'),
+  )
+
+const FILTROS_INICIALES = { rubro: '', barrio: '', viabilidad: '', favoritos: false }
+
 export default function MisAnalisisPage() {
   const { isAuthenticated, loading: authLoading } = useAuth()
   const [items, setItems] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
+
+  const [filtros, setFiltros] = useState(FILTROS_INICIALES)
+  const [orden, setOrden] = useState('fecha_desc')
 
   useEffect(() => {
     if (authLoading) return
@@ -32,6 +43,32 @@ export default function MisAnalisisPage() {
       .catch(() => setError('No se pudieron cargar tus análisis.'))
       .finally(() => setCargando(false))
   }, [isAuthenticated, authLoading])
+
+  const rubros = useMemo(() => distintos(items, 'rubro_nombre'), [items])
+  const barrios = useMemo(() => distintos(items, 'barrio_nombre'), [items])
+
+  const setFiltro = (campo, valor) => setFiltros((f) => ({ ...f, [campo]: valor }))
+  const limpiar = () => { setFiltros(FILTROS_INICIALES); setOrden('fecha_desc') }
+  const hayFiltros =
+    filtros.rubro || filtros.barrio || filtros.viabilidad || filtros.favoritos
+
+  // Filtrado + ordenamiento en cliente: la lista del usuario es acotada.
+  const visibles = useMemo(() => {
+    const filtrados = items.filter((it) => {
+      if (filtros.rubro && it.rubro_nombre !== filtros.rubro) return false
+      if (filtros.barrio && it.barrio_nombre !== filtros.barrio) return false
+      if (filtros.viabilidad && it.decision !== filtros.viabilidad) return false
+      if (filtros.favoritos && !it.favorito) return false
+      return true
+    })
+    const cmp = {
+      fecha_desc: (a, b) => new Date(b.guardado_at) - new Date(a.guardado_at),
+      fecha_asc: (a, b) => new Date(a.guardado_at) - new Date(b.guardado_at),
+      score_desc: (a, b) => b.score - a.score,
+      score_asc: (a, b) => a.score - b.score,
+    }
+    return [...filtrados].sort(cmp[orden] || cmp.fecha_desc)
+  }, [items, filtros, orden])
 
   const toggleFavorito = async (item) => {
     try {
@@ -72,9 +109,69 @@ export default function MisAnalisisPage() {
       <div className="saved__head">
         <h2>Mis Análisis</h2>
         <p>
-          {items.length} {items.length === 1 ? 'análisis guardado' : 'análisis guardados'}
+          {hayFiltros
+            ? `${visibles.length} de ${items.length} ${items.length === 1 ? 'análisis' : 'análisis'}`
+            : `${items.length} ${items.length === 1 ? 'análisis guardado' : 'análisis guardados'}`}
         </p>
       </div>
+
+      {!cargando && !error && items.length > 0 && (
+        <div className="saved__filters">
+          <label className="saved__filter">
+            <span>Rubro</span>
+            <select value={filtros.rubro} onChange={(e) => setFiltro('rubro', e.target.value)}>
+              <option value="">Todos</option>
+              {rubros.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </label>
+
+          <label className="saved__filter">
+            <span>Barrio</span>
+            <select value={filtros.barrio} onChange={(e) => setFiltro('barrio', e.target.value)}>
+              <option value="">Todos</option>
+              {barrios.map((b) => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </label>
+
+          <label className="saved__filter">
+            <span>Viabilidad</span>
+            <select
+              value={filtros.viabilidad}
+              onChange={(e) => setFiltro('viabilidad', e.target.value)}
+            >
+              <option value="">Todas</option>
+              <option value="ALTA">Alta</option>
+              <option value="MEDIA">Media</option>
+              <option value="BAJA">Baja</option>
+            </select>
+          </label>
+
+          <label className="saved__filter">
+            <span>Ordenar por</span>
+            <select value={orden} onChange={(e) => setOrden(e.target.value)}>
+              <option value="fecha_desc">Fecha (más nuevo)</option>
+              <option value="fecha_asc">Fecha (más viejo)</option>
+              <option value="score_desc">Score (mayor a menor)</option>
+              <option value="score_asc">Score (menor a mayor)</option>
+            </select>
+          </label>
+
+          <button
+            type="button"
+            className={`saved__chip ${filtros.favoritos ? 'is-on' : ''}`}
+            onClick={() => setFiltro('favoritos', !filtros.favoritos)}
+            aria-pressed={filtros.favoritos}
+          >
+            {filtros.favoritos ? '★' : '☆'} Favoritos
+          </button>
+
+          {hayFiltros && (
+            <button type="button" className="saved__clear" onClick={limpiar}>
+              Limpiar
+            </button>
+          )}
+        </div>
+      )}
 
       {cargando ? (
         <p className="saved__muted">Cargando…</p>
@@ -87,9 +184,16 @@ export default function MisAnalisisPage() {
             un punto y un rubro, y guardá el resultado.
           </p>
         </div>
+      ) : visibles.length === 0 ? (
+        <p className="saved__muted">
+          Ningún análisis coincide con los filtros.{' '}
+          <button type="button" className="saved__linkbtn" onClick={limpiar}>
+            Limpiar filtros
+          </button>
+        </p>
       ) : (
         <ul className="saved__list">
-          {items.map((it) => (
+          {visibles.map((it) => (
             <li key={it.id} className="saved__card">
               <Link to={`/mis-analisis/${it.id}`} className="saved__link">
                 <div

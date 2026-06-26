@@ -392,6 +392,41 @@ a.btn { display: inline-block; text-decoration: none; }
 .saved__head h2 { margin: 0; color: var(--ink); }
 .saved__head p { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.85rem; }
 .saved__muted { color: var(--muted); }
+
+/* Barra de filtros y orden de Mis Análisis */
+.saved__filters {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem;
+  margin-bottom: 1.25rem; padding: 0.9rem 1rem;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.saved__filter { display: flex; flex-direction: column; gap: 0.25rem; min-width: 150px; }
+.saved__filter span {
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--muted); font-weight: 600;
+  /* Alinea el título con el texto interno del select (su padding izquierdo). */
+  padding-left: 0.4rem;
+}
+.saved__filter select {
+  padding: 0.5rem 0.6rem; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--card); color: var(--ink); font-size: 0.85rem;
+}
+.saved__filter select:focus { outline: none; border-color: var(--brand); }
+.saved__chip {
+  align-self: stretch; margin-top: auto; display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.5rem 0.85rem; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--card); color: var(--muted); font-size: 0.85rem; cursor: pointer;
+}
+.saved__chip:hover { border-color: var(--brand); color: var(--brand-dark); }
+.saved__chip.is-on { border-color: #f59e0b; color: #b45309; background: #fffbeb; }
+.saved__clear {
+  align-self: stretch; margin-top: auto; padding: 0.5rem 0.75rem;
+  border: none; background: none; color: var(--brand); font-size: 0.85rem; cursor: pointer;
+}
+.saved__clear:hover { color: var(--brand-dark); text-decoration: underline; }
+.saved__linkbtn {
+  border: none; background: none; color: var(--brand); font-size: inherit;
+  cursor: pointer; padding: 0; text-decoration: underline;
+}
 .saved__list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem; }
 .saved__card {
   display: flex; align-items: center; gap: 1rem; padding: 1rem 1.1rem;
