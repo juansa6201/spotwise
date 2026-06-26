@@ -1,5 +1,4 @@
 import json
-import logging
 
 from django.contrib.gis.geos import Point
 from django.core.cache import cache
@@ -9,9 +8,7 @@ from rest_framework.views import APIView
 
 from .models import Barrio, Rubro
 from .serializers import BarrioResumenSerializer, RubroSerializer
-from .services import esta_en_cordoba, geocodificar
-
-logger = logging.getLogger(__name__)
+from .services import esta_en_cordoba
 
 # Tolerancia de simplificación de los polígonos (en grados, ~11 m). Reduce el
 # tamaño del payload sin alterar de forma visible la delimitación en el mapa.
@@ -101,27 +98,7 @@ class ValidarUbicacionView(APIView):
             "mensaje": (
                 "Ubicación válida dentro de la ciudad de Córdoba."
                 if dentro
-                else "La ubicación seleccionada está fuera del alcance del prototipo "
+                else "La ubicación seleccionada está fuera del alcance "
                      "(ciudad de Córdoba)."
             ),
         })
-
-
-class GeocodeView(APIView):
-    """Busca una dirección dentro de Córdoba y devuelve coordenadas (proxy a Nominatim)."""
-
-    permission_classes = [permissions.AllowAny]
-
-    def get(self, request):
-        q = (request.query_params.get("q") or "").strip()
-        if len(q) < 3:
-            return Response({"resultados": []})
-        try:
-            resultados = geocodificar(q)
-        except Exception:
-            logger.exception("Error geocodificando la dirección %r", q)
-            return Response(
-                {"detail": "No se pudo completar la búsqueda de la dirección en este momento."},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-        return Response({"resultados": resultados})

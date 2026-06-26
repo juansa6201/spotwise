@@ -72,7 +72,7 @@ body {
 .home {
   max-width: 960px;
   margin: 0 auto;
-  padding: 4rem 1.5rem 3rem;
+  padding: 6.5rem 1.5rem 3rem;
   text-align: center;
 }
 .home__hero h1 {
@@ -246,6 +246,7 @@ a.btn { display: inline-block; text-decoration: none; }
 }
 .analysis__results li:last-child { border-bottom: none; }
 .analysis__results li:hover { background: var(--brand-light); }
+.analysis__searching { margin: 0.4rem 0 0; font-size: 0.78rem; color: var(--muted); }
 .analysis__validation { font-size: 0.85rem; padding: 0.6rem 0.8rem; border-radius: 8px; margin-bottom: 1rem; }
 .analysis__validation.is-ok { background: #e7f6ec; color: var(--ok); }
 .analysis__validation.is-err { background: #fdeaea; color: var(--err); }

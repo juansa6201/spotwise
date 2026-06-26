@@ -1,18 +1,8 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import api from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 
 export default function HomePage() {
   const { isAuthenticated } = useAuth()
-  const [apiStatus, setApiStatus] = useState('checking')
-
-  useEffect(() => {
-    api
-      .get('/health/')
-      .then((res) => setApiStatus(res.data?.status === 'ok' ? 'ok' : 'error'))
-      .catch(() => setApiStatus('error'))
-  }, [])
 
   return (
     <section className="home">
@@ -29,8 +19,6 @@ export default function HomePage() {
             <Link to="/login" className="btn btn--ghost">Iniciar sesión</Link>
           )}
         </div>
-
-        <ApiBadge status={apiStatus} />
       </div>
 
       <div className="home__cards">
@@ -56,14 +44,4 @@ export default function HomePage() {
       </div>
     </section>
   )
-}
-
-function ApiBadge({ status }) {
-  const map = {
-    checking: { text: 'Verificando conexión con la API…', cls: 'badge--muted' },
-    ok: { text: 'API conectada', cls: 'badge--ok' },
-    error: { text: 'Sin conexión con la API (¿levantaste el backend?)', cls: 'badge--err' },
-  }
-  const { text, cls } = map[status]
-  return <span className={`badge ${cls}`}>● {text}</span>
 }

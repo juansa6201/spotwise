@@ -1,6 +1,4 @@
 """Tests de catálogo: listado de rubros y validación de ubicación (bbox Córdoba)."""
-from unittest.mock import patch
-
 from django.contrib.gis.geos import MultiPolygon, Polygon
 from django.core.cache import cache
 from rest_framework.test import APITestCase
@@ -106,14 +104,3 @@ class BarriosGeoJSONTest(APITestCase):
         cache.clear()
         fresca = self.client.get(self.url)
         self.assertEqual(len(fresca.data["features"]), 2)
-
-
-class GeocodeLoggingTest(APITestCase):
-    """Un fallo de geocodificación devuelve 502 y queda registrado en el log."""
-
-    def test_loguea_el_error(self):
-        with patch("apps.catalog.views.geocodificar", side_effect=RuntimeError("boom")):
-            with self.assertLogs("apps.catalog.views", level="ERROR") as cm:
-                resp = self.client.get("/api/catalog/geocode/", {"q": "Av Colon 100"})
-        self.assertEqual(resp.status_code, 502)
-        self.assertTrue(any("geocodificando" in linea.lower() for linea in cm.output))
