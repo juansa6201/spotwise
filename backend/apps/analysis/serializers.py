@@ -36,8 +36,9 @@ class AnalisisGuardadoSerializer(serializers.ModelSerializer):
             "latitud", "longitud", "direccion", "score", "decision", "decision_display",
             "rubro_id", "rubro_nombre", "barrio_nombre",
             "barrio_densidad", "barrio_indice_socioeconomico", "barrio_semaforo",
-            "indicadores", "guardado_at",
+            "indicadores", "competidores", "guardado_at",
         ]
         read_only_fields = [
-            "id", "latitud", "longitud", "direccion", "score", "decision", "guardado_at",
+            "id", "latitud", "longitud", "direccion", "score", "decision",
+            "competidores", "guardado_at",
         ]

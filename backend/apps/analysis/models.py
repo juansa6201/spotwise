@@ -40,6 +40,11 @@ class AnalisisGuardado(models.Model):
     score = models.FloatField("score de viabilidad (0–100)")
     decision = models.CharField(max_length=10, choices=Decision.choices, blank=True)
 
+    # Snapshot de los competidores directos del análisis (nombre, lat, lng,
+    # rating, reseñas), para dibujarlos en el mapa del detalle sin re-consultar
+    # Google Places.
+    competidores = models.JSONField("competidores directos", default=list, blank=True)
+
     guardado_at = models.DateTimeField("guardado", auto_now_add=True)
 
     class Meta:
