@@ -2,6 +2,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
+// La key se lee al cargar el módulo, así que la stubeamos antes de importarlo.
+vi.hoisted(() => {
+  vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', 'test-key')
+})
+
 vi.mock('../api/client.js', () => ({
   default: { get: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }))
