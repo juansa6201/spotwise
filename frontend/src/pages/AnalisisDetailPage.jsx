@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps'
+import { APIProvider, InfoWindow, Map, Marker } from '@vis.gl/react-google-maps'
 import api from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { COLOR_DECISION } from '../utils/score.js'
 import IndicadoresAnalisis from '../components/IndicadoresAnalisis.jsx'
+import LugarInfo, { markerIcon } from '../components/LugarInfo.jsx'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
@@ -32,6 +33,7 @@ export default function AnalisisDetailPage() {
   const [notas, setNotas] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [guardadoOk, setGuardadoOk] = useState(false)
+  const [lugarSel, setLugarSel] = useState(null) // competidor abierto en el InfoWindow
 
   useEffect(() => {
     if (authLoading) return
@@ -119,6 +121,7 @@ export default function AnalisisDetailPage() {
 
   const color = COLOR_DECISION[analisis.decision] || '#64748b'
   const punto = { lat: analisis.latitud, lng: analisis.longitud }
+  const competidores = analisis.competidores || []
   const scorePorTipo = Object.fromEntries(analisis.indicadores.map((i) => [i.tipo, i.score]))
 
   // Dirección persistida al guardar; coordenadas como fallback.
@@ -170,7 +173,12 @@ export default function AnalisisDetailPage() {
 
       {GOOGLE_MAPS_API_KEY && (
         <section className="detail__section">
-          <h3>Ubicación</h3>
+          <h3>
+            Ubicación
+            {competidores.length > 0 && (
+              <span className="detail__map-count"> · {competidores.length} competidores</span>
+            )}
+          </h3>
           <div className="detail__map">
             <APIProvider apiKey={GOOGLE_MAPS_API_KEY} language="es" region="AR">
               <Map
@@ -178,9 +186,28 @@ export default function AnalisisDetailPage() {
                 defaultCenter={punto}
                 defaultZoom={15}
                 gestureHandling="cooperative"
+                clickableIcons={false}
+                onClick={() => setLugarSel(null)}
                 disableDefaultUI
               >
                 <Marker position={punto} />
+                {competidores.map((l, i) => (
+                  <Marker
+                    key={i}
+                    position={{ lat: l.lat, lng: l.lng }}
+                    icon={markerIcon(true)}
+                    onClick={() => setLugarSel(i)}
+                  />
+                ))}
+                {lugarSel != null && competidores[lugarSel] && (
+                  <InfoWindow
+                    position={{ lat: competidores[lugarSel].lat, lng: competidores[lugarSel].lng }}
+                    onCloseClick={() => setLugarSel(null)}
+                    headerDisabled
+                  >
+                    <LugarInfo lugar={competidores[lugarSel]} />
+                  </InfoWindow>
+                )}
               </Map>
             </APIProvider>
           </div>
