@@ -491,6 +491,7 @@ a.btn { display: inline-block; text-decoration: none; }
 .detail__fav.is-on { color: #f59e0b; border-color: #f59e0b; }
 .detail__section { margin-top: 1.5rem; }
 .detail__section h3 { margin: 0 0 0.7rem; font-size: 0.95rem; color: var(--ink); }
+.detail__map-count { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
 .detail__map { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .detail__section textarea {
   width: 100%; padding: 0.55rem 0.7rem; border: 1px solid var(--border);

@@ -5,46 +5,14 @@ import api from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { COLOR_DECISION, LABEL_DECISION } from '../utils/score.js'
 import IndicadoresAnalisis from '../components/IndicadoresAnalisis.jsx'
+import LugarInfo, { markerIcon } from '../components/LugarInfo.jsx'
 import { direccionCalleNumero } from '../utils/geo.js'
-import { tipoPrincipal } from '../utils/places.js'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 const CORDOBA_CENTER = { lat: -31.4201, lng: -64.1888 }
 // Caja de la ciudad de Córdoba: sesga las sugerencias del autocompletado.
 const CORDOBA_BOUNDS = { north: -31.30, south: -31.55, east: -64.04, west: -64.36 }
 const RADIO_METROS = 500 // radio de análisis predefinido (coincide con el backend)
-
-function markerIcon(competidor) {
-  if (!window.google) return undefined
-  return {
-    path: window.google.maps.SymbolPath.CIRCLE,
-    scale: competidor ? 7 : 5,
-    fillColor: competidor ? '#dc2626' : '#9ca3af',
-    fillOpacity: 0.9,
-    strokeColor: '#ffffff',
-    strokeWeight: 1.2,
-  }
-}
-
-// Contenido del InfoWindow al pulsar un comercio del mapa de análisis.
-function LugarInfo({ lugar }) {
-  const tipo = tipoPrincipal(lugar.tipos)
-  return (
-    <div className="lugar-info">
-      <strong className="lugar-info__nombre">{lugar.nombre || 'Negocio sin nombre'}</strong>
-      <span className={`lugar-info__tag ${lugar.competidor ? 'is-comp' : ''}`}>
-        {lugar.competidor ? 'Competidor directo' : 'Comercio'}
-      </span>
-      <dl className="lugar-info__rows">
-        {lugar.rating != null && (
-          <div><dt>Calificación</dt><dd>★ {lugar.rating}</dd></div>
-        )}
-        <div><dt>Reseñas</dt><dd>{(lugar.resenas ?? 0).toLocaleString('es-AR')}</dd></div>
-        {tipo && <div><dt>Tipo</dt><dd className="lugar-info__tipo">{tipo}</dd></div>}
-      </dl>
-    </div>
-  )
-}
 
 // Colores tenues por nivel socioeconómico (semáforo del barrio).
 const SEM_FILL = { VERDE: '#16a34a', AMARILLO: '#eab308', ROJO: '#dc2626' }

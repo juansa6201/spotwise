@@ -113,6 +113,12 @@ class GuardadosView(generics.ListCreateAPIView):
             poligono__contains=Point(lng, lat, srid=4326)
         ).first()
 
+        # Guarda solo los competidores directos (los ya calculados en el análisis)
+        # para poder mostrarlos en el mapa del detalle.
+        competidores = [
+            lugar for lugar in resultado.get("lugares", []) if lugar.get("competidor")
+        ]
+
         with transaction.atomic():
             analisis = AnalisisGuardado.objects.create(
                 usuario=request.user,
@@ -126,6 +132,7 @@ class GuardadosView(generics.ListCreateAPIView):
                 direccion=(request.data.get("direccion") or "").strip()[:255],
                 score=resultado["score"],
                 decision=resultado["decision"],
+                competidores=competidores,
             )
             Indicador.objects.bulk_create([
                 Indicador(analisis=analisis, tipo=TIPO_POR_CLAVE[clave], score=valor)

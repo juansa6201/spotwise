@@ -29,13 +29,13 @@ def _multipoligono(lng, lat, d=0.02):
     return MultiPolygon(Polygon(ring, srid=4326), srid=4326)
 
 
-def _zona(competidores=0, comercios=0, resenas=0):
+def _zona(competidores=0, comercios=0, resenas=0, lugares=None):
     """Dict con la forma que devuelve `places.services.analizar_zona`."""
     return {
         "cantidad_mismo_rubro": competidores,
         "cantidad_total_comercios": comercios,
         "total_resenas": resenas,
-        "lugares": [],
+        "lugares": lugares or [],
         "cacheado": False,
     }
 
@@ -199,6 +199,26 @@ class GuardadosEndpointTest(APITestCase):
         # 3 indicadores (poblacional, actividad, competencia) persistidos
         self.assertEqual(analisis.indicadores.count(), 3)
         self.assertEqual(resp.data["barrio_nombre"], "Centro")
+
+    def test_guarda_solo_los_competidores_directos(self):
+        self.client.force_authenticate(self.user)
+        lugares = [
+            {"nombre": "Bar Rival", "lat": LAT, "lng": LNG, "rating": 4.2,
+             "resenas": 120, "tipos": ["bar"], "competidor": True},
+            {"nombre": "Kiosco", "lat": LAT, "lng": LNG, "rating": None,
+             "resenas": 3, "tipos": ["store"], "competidor": False},
+        ]
+        with patch.object(scoring, "analizar_zona", return_value=_zona(1, 8, 1200, lugares)):
+            resp = self.client.post(self.url, {
+                "lat": LAT, "lng": LNG, "rubro_id": str(self.rubro.id),
+                "nombre_referencia": "Local centro",
+            })
+        self.assertEqual(resp.status_code, 201)
+        # Solo el competidor directo queda persistido, con su nombre.
+        self.assertEqual(len(resp.data["competidores"]), 1)
+        self.assertEqual(resp.data["competidores"][0]["nombre"], "Bar Rival")
+        analisis = AnalisisGuardado.objects.get(usuario=self.user)
+        self.assertEqual(analisis.competidores[0]["resenas"], 120)
 
     def test_guarda_la_direccion_y_la_devuelve(self):
         self.client.force_authenticate(self.user)

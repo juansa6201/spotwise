@@ -2,6 +2,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
+// La key se lee al cargar el módulo, así que la stubeamos antes de importarlo.
+vi.hoisted(() => {
+  vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', 'test-key')
+})
+
 vi.mock('../api/client.js', () => ({
   default: { get: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }))
@@ -11,6 +16,7 @@ vi.mock('@vis.gl/react-google-maps', () => ({
   APIProvider: ({ children }) => children,
   Map: () => null,
   Marker: () => null,
+  InfoWindow: () => null,
 }))
 
 import api from '../api/client.js'
@@ -53,6 +59,21 @@ describe('AnalisisDetailPage', () => {
     expect(screen.getByText('Competencia del rubro')).toBeInTheDocument()
     expect(screen.getByText('Actividad comercial')).toBeInTheDocument()
     expect(api.get).toHaveBeenCalledWith('/analysis/guardados/abc/')
+  })
+
+  it('muestra la cantidad de competidores guardados', async () => {
+    useAuth.mockReturnValue({ isAuthenticated: true, loading: false })
+    api.get.mockResolvedValue({
+      data: {
+        ...ANALISIS,
+        competidores: [
+          { nombre: 'Bar Rival', lat: -31.42, lng: -64.19, rating: 4.2, resenas: 120, tipos: ['bar'], competidor: true },
+          { nombre: 'Otro Bar', lat: -31.421, lng: -64.191, rating: 3.9, resenas: 40, tipos: ['bar'], competidor: true },
+        ],
+      },
+    })
+    renderPage()
+    expect(await screen.findByText(/2 competidores/)).toBeInTheDocument()
   })
 
   it('muestra un mensaje si el análisis no existe', async () => {
