@@ -8,18 +8,21 @@ en el mapa de la ciudad de Córdoba y un rubro comercial, el sistema calcula un
 
 - **Competencia y actividad comercial** → Google Places API (negocios cercanos en un radio fijo).
 - **Contexto demográfico** → datos abiertos de Gobierno Abierto Córdoba (densidad poblacional,
-  índice socioeconómico por barrio), normalizados mediante un proceso ETL.
+  índice socioeconómico por barrio — IPS), normalizados mediante un proceso ETL.
+
+El score pondera tres indicadores (poblacional/socioeconómico, actividad económica y competencia)
+y se traduce en un semáforo de decisión (alta / media / baja viabilidad).
 
 ## Stack
 
 | Capa | Tecnología |
 |------|------------|
-| Frontend | React + Vite |
+| Frontend | React + Vite · Google Maps (`@vis.gl/react-google-maps`) |
 | Backend / API | Django + Django REST Framework |
 | Base de datos | PostgreSQL + PostGIS |
 | Autenticación | JWT (SimpleJWT) |
-| Fuente externa | Google Places API |
-| Infraestructura | Docker (dev) · AWS (deploy objetivo) |
+| Fuente externa | Google Places API (búsqueda + Autocomplete) |
+| Infraestructura | Docker (dev) · AWS EC2 + RDS + Caddy/HTTPS (deploy) · CI/CD con GitHub Actions |
 
 ## Estructura
 
@@ -27,46 +30,53 @@ en el mapa de la ciudad de Córdoba y un rubro comercial, el sistema calcula un
 spotwise/
 ├── backend/          # API Django + DRF (corre en Docker)
 │   ├── config/       # Proyecto Django (settings, urls)
+│   ├── data/         # KML de barrios (IPS) de Córdoba — fuente del ETL
 │   └── apps/
-│       ├── users/    # Usuario custom (email + JWT)  — HU-001, HU-002
-│       ├── catalog/  # Barrio (PostGIS) y Rubro       — datos de referencia
-│       ├── places/   # Caché de Google Places         — HU-004
-│       └── analysis/ # Análisis, indicadores, score   — HU-006..010
-├── frontend/         # SPA React (corre local con Vite)
-├── data/             # KML/datasets + scripts ETL     — HU-005
-└── docker-compose.yml
+│       ├── users/    # Usuario custom (email + JWT)         — HU-001, HU-002
+│       ├── catalog/  # Barrio (PostGIS) y Rubro + ETL KML   — HU-005
+│       ├── places/   # Integración/caché de Google Places   — HU-004
+│       └── analysis/ # Análisis, indicadores, score, guardados — HU-006..010
+├── frontend/         # SPA React (Vite) — también corre en compose
+├── docker-compose.yml        # Entorno de desarrollo (db + backend + frontend)
+├── docker-compose.prod.yml   # Despliegue en producción
+├── Caddyfile                 # Reverse proxy + HTTPS (Let's Encrypt)
+└── DEPLOY.md                 # Guía de despliegue en AWS
 ```
+
+El ETL de barrios se ejecuta con `python manage.py importar_barrios` (idempotente); en
+desarrollo corre automáticamente al levantar el backend.
 
 ## Puesta en marcha (desarrollo)
 
-Requisitos: Docker y Node 20+.
-
-### 1. Backend + base de datos (Docker)
+Requisitos: Docker.
 
 ```bash
-cp .env.example .env          # (ya incluido un .env de dev)
-docker compose up -d --build  # levanta Postgres+PostGIS y la API
-docker compose exec backend python manage.py migrate
+cp .env.example .env          # (ya incluido un .env de dev; agregá tu Google Maps API key)
+docker compose up -d --build  # levanta Postgres+PostGIS, la API y el frontend
+```
+
+Al iniciar, el backend corre las migraciones e importa los barrios (ETL) automáticamente.
+Para crear un superusuario del admin de Django:
+
+```bash
 docker compose exec backend python manage.py createsuperuser
 ```
 
-API disponible en http://localhost:8000 — health check: http://localhost:8000/api/health/
+Servicios disponibles:
 
-### 2. Frontend (local)
+- Frontend (SPA): http://localhost:5173 — las llamadas a `/api` se redirigen al backend.
+- API: http://localhost:8000 — health check: http://localhost:8000/api/health/
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-App disponible en http://localhost:5173 (las llamadas a `/api` se redirigen al backend).
+> El despliegue en producción (AWS EC2 + RDS + Caddy/HTTPS) está documentado en [DEPLOY.md](DEPLOY.md).
 
 ## Estado del proyecto
 
 - [x] **Fase 0** — Base: Docker, Django+DRF, React+Vite, modelos y migraciones.
-- [ ] **Fase 1** — Registro + login (JWT) y selección de ubicación en el mapa.
-- [ ] **Fase 2** — Integración Google Places + ETL de datos demográficos (KML → PostGIS).
-- [ ] **Fase 3** — Cálculo de indicadores y score de viabilidad.
-- [ ] **Fase 4** — Visualización de resultados y mapa analítico.
-- [ ] **Fase 5** — Guardado y consulta de ubicaciones.
+- [x] **Fase 1** — Registro + login (JWT) y selección de ubicación en el mapa.
+- [x] **Fase 2** — Integración Google Places + ETL de datos demográficos (KML → PostGIS).
+- [x] **Fase 3** — Cálculo de indicadores y score de viabilidad.
+- [x] **Fase 4** — Visualización de resultados y mapa analítico.
+- [x] **Fase 5** — Guardado y consulta de ubicaciones.
+
+Extras ya implementados: despliegue en AWS con HTTPS (Caddy + Let's Encrypt), CI/CD con
+GitHub Actions, logging estructurado y buscador de direcciones (Places Autocomplete).
