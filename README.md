@@ -51,9 +51,14 @@ desarrollo corre automáticamente al levantar el backend.
 Requisitos: Docker.
 
 ```bash
-cp .env.example .env          # (ya incluido un .env de dev; agregá tu Google Maps API key)
-docker compose up -d --build  # levanta Postgres+PostGIS, la API y el frontend
+cp .env.example .env                    # config del backend + DB (obligatorio)
+cp frontend/.env.example frontend/.env  # config del frontend (necesario para el mapa)
+docker compose up -d --build            # levanta Postgres+PostGIS, la API y el frontend
 ```
+
+Completá las API keys de Google en ambos archivos: `GOOGLE_PLACES_API_KEY` en `.env` y
+`VITE_GOOGLE_MAPS_API_KEY` en `frontend/.env`. Sin el `frontend/.env` el sitio igual
+levanta, pero el mapa de Google no se renderiza.
 
 Al iniciar, el backend corre las migraciones e importa los barrios (ETL) automáticamente.
 Para crear un superusuario del admin de Django:
