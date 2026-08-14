@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -33,6 +34,7 @@ vi.mock('@vis.gl/react-google-maps', () => ({
 
 import api from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
+import { guardarPendiente, limpiarPendiente } from '../utils/analisisPendiente.js'
 import AnalysisPage from './AnalysisPage.jsx'
 
 // La geocodificación inversa (Geocoder de Google) se controla por test.
@@ -181,5 +183,99 @@ describe('AnalysisPage · búsqueda y dirección', () => {
     expect(await screen.findByText('GÜEMES')).toBeInTheDocument()
     expect(screen.getByText(/Medio · IPS 4\/5/)).toBeInTheDocument()
     expect(screen.getByText(/11\.588/)).toBeInTheDocument() // habitantes con separador es-AR
+  })
+})
+
+// El análisis sólo debe sobrevivir al ida y vuelta del login (retenido en
+// memoria). Al recargar o navegar de otra forma no hay nada retenido y se
+// arranca de cero.
+describe('AnalysisPage · retención para el login', () => {
+  const RESULTADO = {
+    lat: -31.42, lng: -64.19, radio_m: 500, score: 72, decision: 'ALTA',
+    rubro: { id: 3, nombre: 'Farmacia' },
+    barrio: { nombre: 'GÜEMES', densidad_hab_km2: 9799.6, indice_socioeconomico: 'Medio', semaforo: 'AMARILLO' },
+    indicadores: { actividad_economica: 60, competencia: 80 },
+    competencia: { competidores_directos: 2, comercios_totales: 40 },
+    lugares: [],
+  }
+  const SNAPSHOT = {
+    rubroId: '3',
+    position: { lat: -31.42, lng: -64.19 },
+    validacion: { dentro_de_cordoba: true, mensaje: 'Ubicación válida' },
+    direccion: 'Avenida Colón 1000',
+    resultado: RESULTADO,
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    limpiarPendiente() // descarta lo retenido de un test anterior
+    window.google = { maps: { Geocoder: class { geocode() {} }, SymbolPath: { CIRCLE: 0 } } }
+    api.get.mockResolvedValue({ data: [] })
+    api.post.mockResolvedValue({ data: {} })
+  })
+
+  afterEach(() => {
+    delete window.google
+    limpiarPendiente()
+  })
+
+  it('restaura el análisis retenido al volver del login (sin sesión aún)', async () => {
+    useAuth.mockReturnValue({ isAuthenticated: false })
+    guardarPendiente(SNAPSHOT)
+    renderPage()
+
+    expect(await screen.findByText('72')).toBeInTheDocument()
+    expect(screen.getByText('Alta viabilidad')).toBeInTheDocument()
+    expect(screen.getByText('GÜEMES')).toBeInTheDocument()
+    // Sin sesión: se ofrece iniciar sesión sin perder el resultado.
+    expect(screen.getByText('Iniciá sesión')).toBeInTheDocument()
+  })
+
+  it('tras el login el resultado restaurado muestra el formulario para guardar', async () => {
+    useAuth.mockReturnValue({ isAuthenticated: true })
+    guardarPendiente(SNAPSHOT)
+    renderPage()
+
+    expect(await screen.findByText('72')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/Nombre de referencia/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Guardar ubicación/i })).toBeInTheDocument()
+  })
+
+  it('sin nada retenido (recarga o navegación normal) arranca sin análisis', async () => {
+    useAuth.mockReturnValue({ isAuthenticated: false })
+    renderPage()
+
+    expect(await screen.findByText(/Hacé clic en el mapa/i)).toBeInTheDocument()
+    expect(screen.queryByText('72')).not.toBeInTheDocument()
+  })
+
+  it('la retención se consume una sola vez: un segundo montaje ya no la restaura', async () => {
+    useAuth.mockReturnValue({ isAuthenticated: false })
+    guardarPendiente(SNAPSHOT)
+    const { unmount } = renderPage()
+    expect(await screen.findByText('72')).toBeInTheDocument()
+    unmount()
+
+    // Volver a montar (p. ej. navegar a otra página y regresar) no debe restaurar.
+    renderPage()
+    expect(await screen.findByText(/Hacé clic en el mapa/i)).toBeInTheDocument()
+    expect(screen.queryByText('72')).not.toBeInTheDocument()
+  })
+
+  // Regresión: en dev la app va envuelta en StrictMode, que monta dos veces. La
+  // restauración debía sobrevivir a ese doble montaje (antes se perdía).
+  it('restaura bajo StrictMode (doble montaje en desarrollo)', async () => {
+    useAuth.mockReturnValue({ isAuthenticated: true })
+    guardarPendiente(SNAPSHOT)
+    render(
+      <StrictMode>
+        <MemoryRouter>
+          <AnalysisPage />
+        </MemoryRouter>
+      </StrictMode>,
+    )
+
+    expect(await screen.findByText('72')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Guardar ubicación/i })).toBeInTheDocument()
   })
 })
