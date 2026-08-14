@@ -64,6 +64,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Preparar el directorio en el servidor
+        # Crea /opt/spotwise y se lo asigna al usuario del deploy: sin esto el
+        # scp falla al no poder escribir/extraer en un directorio de root.
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo mkdir -p /opt/spotwise
+            sudo chown -R ${{ secrets.EC2_USER }} /opt/spotwise
+
       - name: Copiar el compose de prod al servidor
         uses: appleboy/scp-action@v0.1.7
         with:
