@@ -7,6 +7,7 @@ import { COLOR_DECISION, LABEL_DECISION } from '../utils/score.js'
 import IndicadoresAnalisis from '../components/IndicadoresAnalisis.jsx'
 import LugarInfo, { markerIcon } from '../components/LugarInfo.jsx'
 import { direccionCalleNumero } from '../utils/geo.js'
+import { guardarPendiente, leerPendiente, limpiarPendiente } from '../utils/analisisPendiente.js'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 const CORDOBA_CENTER = { lat: -31.4201, lng: -64.1888 }
@@ -201,16 +202,22 @@ function BuscadorDireccion({ onElegir }) {
 }
 
 export default function AnalysisPage() {
+  // Si venimos de iniciar sesión para guardar, recuperamos el análisis retenido
+  // en memoria. La lectura es pura (segura ante el doble render de StrictMode);
+  // se descarta después en un effect. Al recargar o navegar de otra forma no hay
+  // nada retenido, así que se arranca con un análisis nuevo.
+  const [restaurado] = useState(leerPendiente)
+
   const [rubros, setRubros] = useState([])
-  const [rubroId, setRubroId] = useState('')
-  const [position, setPosition] = useState(null) // { lat, lng }
-  const [validacion, setValidacion] = useState(null)
-  const [direccion, setDireccion] = useState('')
+  const [rubroId, setRubroId] = useState(restaurado?.rubroId ?? '')
+  const [position, setPosition] = useState(restaurado?.position ?? null) // { lat, lng }
+  const [validacion, setValidacion] = useState(restaurado?.validacion ?? null)
+  const [direccion, setDireccion] = useState(restaurado?.direccion ?? '')
   const [geocodificando, setGeocodificando] = useState(false)
   const [mostrarBarrio, setMostrarBarrio] = useState(false)
 
   const [analizando, setAnalizando] = useState(false)
-  const [resultado, setResultado] = useState(null)
+  const [resultado, setResultado] = useState(restaurado?.resultado ?? null)
   const [lugarSel, setLugarSel] = useState(null) // índice del lugar abierto en el InfoWindow
   const [errorAnalisis, setErrorAnalisis] = useState('')
 
@@ -222,6 +229,16 @@ export default function AnalysisPage() {
   useEffect(() => {
     api.get('/catalog/rubros/').then(({ data }) => setRubros(data)).catch(() => setRubros([]))
   }, [])
+
+  // Ya montada la página, el estado inicial ya tomó el análisis retenido (si
+  // veníamos del login). Lo descartamos para que una navegación posterior o una
+  // recarga arranquen sin él.
+  useEffect(() => { limpiarPendiente() }, [])
+
+  // Antes de ir al login, retiene el análisis actual para restaurarlo al volver.
+  const retenerParaLogin = () => {
+    guardarPendiente({ rubroId, position, validacion, direccion, resultado })
+  }
 
   const seleccionar = async (lat, lng, direccionConocida) => {
     setPosition({ lat, lng })
@@ -336,6 +353,7 @@ export default function AnalysisPage() {
             rubro={rubroSel?.nombre}
             autenticado={isAuthenticated}
             onGuardar={guardar}
+            onIrALogin={retenerParaLogin}
             guardando={guardando}
             guardado={guardado}
             errorGuardar={errorGuardar}
@@ -492,7 +510,7 @@ function ProcessingPanel() {
   )
 }
 
-function ResultPanel({ r, rubro, autenticado, onGuardar, guardando, guardado, errorGuardar }) {
+function ResultPanel({ r, rubro, autenticado, onGuardar, onIrALogin, guardando, guardado, errorGuardar }) {
   const color = COLOR_DECISION[r.decision] || '#64748b'
   const [nombre, setNombre] = useState('')
   return (
@@ -526,7 +544,7 @@ function ResultPanel({ r, rubro, autenticado, onGuardar, guardando, guardado, er
       <div className="result__save">
         {!autenticado ? (
           <p className="result__login-hint">
-            <Link to="/login">Iniciá sesión</Link> para guardar este análisis.
+            <Link to="/login" state={{ from: '/analisis' }} onClick={onIrALogin}>Iniciá sesión</Link> para guardar este análisis.
           </p>
         ) : guardado ? (
           <p className="result__saved">
