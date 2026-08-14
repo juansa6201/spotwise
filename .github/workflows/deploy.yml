@@ -64,9 +64,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Preparar el directorio en el servidor
-        # Crea /opt/spotwise y se lo asigna al usuario del deploy: sin esto el
-        # scp falla al no poder escribir/extraer en un directorio de root.
+      - name: Preparar el servidor (directorio + espacio en disco)
+        # Crea /opt/spotwise y se lo asigna al usuario del deploy (si no, el scp
+        # no puede escribir en un directorio de root). Además libera disco ANTES
+        # del scp: se llenaba con imágenes viejas (tag :SHA, no dangling) y con
+        # los .tar.gz temporales que los scp fallidos dejan en el home.
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -75,6 +77,8 @@ jobs:
           script: |
             sudo mkdir -p /opt/spotwise
             sudo chown -R ${{ secrets.EC2_USER }} /opt/spotwise
+            docker system prune -af || true
+            rm -f ~/*.tar.gz
 
       - name: Copiar el compose de prod al servidor
         uses: appleboy/scp-action@v0.1.7
@@ -97,4 +101,5 @@ jobs:
             export TAG=${{ github.sha }}
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
-            docker image prune -f
+            # Descarta la imagen de la versión anterior, ya reemplazada.
+            docker image prune -af
