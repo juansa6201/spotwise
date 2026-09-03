@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "django.contrib.gis",
     # Terceros
     "rest_framework",
+    "drf_spectacular",
     "corsheaders",
     # Apps locales
     "apps.users",
@@ -166,11 +167,25 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+}
+
+# ---------------------------------------------------------------------------
+# Documentación de la API (OpenAPI / Swagger)
+# ---------------------------------------------------------------------------
+SPECTACULAR_SETTINGS = {
+    "TITLE": "SpotWise API",
+    "DESCRIPTION": (
+        "API del sistema de análisis geoespacial de viabilidad comercial SpotWise "
+        "(TFG, Ingeniería en Software, UES21)."
+    ),
+    "VERSION": "0.1.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 # ---------------------------------------------------------------------------
