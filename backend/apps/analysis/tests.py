@@ -28,12 +28,11 @@ def _multipoligono(lng, lat, d=0.02):
     return MultiPolygon(Polygon(ring, srid=4326), srid=4326)
 
 
-def _zona(competidores=0, comercios=0, resenas=0, lugares=None):
+def _zona(competidores=0, comercios=0, lugares=None):
     """Dict con la forma que devuelve `places.services.analizar_zona`."""
     return {
         "cantidad_mismo_rubro": competidores,
         "cantidad_total_comercios": comercios,
-        "total_resenas": resenas,
         "lugares": lugares or [],
         "cacheado": False,
     }
@@ -83,7 +82,7 @@ class ScoringCalcularTest(TestCase):
             return scoring.calcular(LAT, LNG, self.rubro)
 
     def test_indicadores_y_score_ponderado(self):
-        res = self._calcular(competidores=3, comercios=10, resenas=2000)
+        res = self._calcular(competidores=3, comercios=10)
         ind = res["indicadores"]
 
         # Poblacional: solo IPS. IPS 4 -> (4-1)/4*100 = 75
@@ -102,10 +101,10 @@ class ScoringCalcularTest(TestCase):
         )
         self.assertEqual(res["score"], esperado)
         self.assertFalse(res["fuera_de_cordoba"])
-        self.assertEqual(res["competencia"]["resenas_totales"], 2000)
+        self.assertEqual(res["competencia"]["comercios_totales"], 10)
 
     def test_competencia_sin_competidores_es_maxima(self):
-        res = self._calcular(competidores=0, comercios=5, resenas=100)
+        res = self._calcular(competidores=0, comercios=5)
         self.assertEqual(res["indicadores"]["competencia"], 100.0)
 
     def test_competencia_saturada_es_cero(self):
@@ -145,7 +144,7 @@ class AnalizarEndpointTest(APITestCase):
         self.url = "/api/analysis/analizar/"
 
     def test_analiza_y_devuelve_score(self):
-        with patch.object(scoring, "analizar_zona", return_value=_zona(2, 10, 1500)):
+        with patch.object(scoring, "analizar_zona", return_value=_zona(2, 10)):
             resp = self.client.post(self.url, {"lat": LAT, "lng": LNG, "rubro_id": str(self.rubro.id)})
         self.assertEqual(resp.status_code, 200)
         self.assertIn("score", resp.data)
@@ -185,7 +184,7 @@ class GuardadosEndpointTest(APITestCase):
         self.url = "/api/analysis/guardados/"
 
     def _guardar(self, **extra):
-        with patch.object(scoring, "analizar_zona", return_value=_zona(1, 8, 1200)):
+        with patch.object(scoring, "analizar_zona", return_value=_zona(1, 8)):
             return self.client.post(self.url, {
                 "lat": LAT, "lng": LNG, "rubro_id": str(self.rubro.id),
                 "nombre_referencia": "Local centro",
@@ -214,7 +213,7 @@ class GuardadosEndpointTest(APITestCase):
             {"nombre": "Kiosco", "lat": LAT, "lng": LNG, "rating": None,
              "resenas": 3, "tipos": ["store"], "competidor": False},
         ]
-        with patch.object(scoring, "analizar_zona", return_value=_zona(1, 8, 1200, lugares)):
+        with patch.object(scoring, "analizar_zona", return_value=_zona(1, 8, lugares)):
             resp = self.client.post(self.url, {
                 "lat": LAT, "lng": LNG, "rubro_id": str(self.rubro.id),
                 "nombre_referencia": "Local centro",

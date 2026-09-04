@@ -64,7 +64,7 @@ class NearbyTest(TestCase):
 
 
 class AnalizarZonaTest(TestCase):
-    """`analizar_zona` agrega reseñas, cuenta competidores y cachea por celda."""
+    """`analizar_zona` cuenta competidores y comercios, y cachea por celda."""
 
     def setUp(self):
         self.rubro = Rubro.objects.get_or_create(
@@ -77,24 +77,23 @@ class AnalizarZonaTest(TestCase):
             {"nombre": "C2", "lat": LAT, "lng": LNG, "tipos": ["store"], "resenas": 200},
         ]
 
-    def test_cache_miss_consulta_suma_resenas_y_guarda(self):
+    def test_cache_miss_consulta_y_guarda(self):
         with patch.object(services, "_nearby", side_effect=[self.competidores, self.comercios]):
             res = services.analizar_zona(LAT, LNG, self.rubro)
 
         self.assertFalse(res["cacheado"])
         self.assertEqual(res["cantidad_mismo_rubro"], 1)
         self.assertEqual(res["cantidad_total_comercios"], 2)
-        self.assertEqual(res["total_resenas"], 250)  # 50 + 200
         # Quedó cacheado por celda + rubro
         cache = CacheGooglePlaces.objects.get(rubro=self.rubro)
-        self.assertEqual(cache.total_resenas, 250)
+        self.assertEqual(cache.cantidad_total_comercios, 2)
 
     def test_cache_hit_no_consulta_la_api(self):
         CacheGooglePlaces.objects.create(
             rubro=self.rubro,
             lat_celda=round(LAT, services.CELDA_DECIMALES),
             lng_celda=round(LNG, services.CELDA_DECIMALES),
-            cantidad_mismo_rubro=2, cantidad_total_comercios=9, total_resenas=999,
+            cantidad_mismo_rubro=2, cantidad_total_comercios=9,
             resultados=[], expira_at=timezone.now() + timedelta(days=1),
         )
         with patch.object(services, "_nearby") as mock_nearby:
@@ -102,4 +101,4 @@ class AnalizarZonaTest(TestCase):
 
         mock_nearby.assert_not_called()
         self.assertTrue(res["cacheado"])
-        self.assertEqual(res["total_resenas"], 999)
+        self.assertEqual(res["cantidad_total_comercios"], 9)

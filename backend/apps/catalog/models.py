@@ -55,10 +55,6 @@ class Barrio(models.Model):
         "índice socioeconómico (categoría)", max_length=40, blank=True,
         help_text="Etiqueta de visualización: Bajo / Medio / Alto.",
     )
-    indice_socioeconomico_num = models.FloatField(
-        "índice socioeconómico (0-100)", null=True, blank=True,
-        help_text="IPS normalizado a 0-100 (1→0, 5→100).",
-    )
 
     # --- Demografía ---
     cantidad_habitantes = models.IntegerField("cantidad de habitantes", null=True, blank=True)

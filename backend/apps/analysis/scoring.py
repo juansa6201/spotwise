@@ -28,10 +28,6 @@ UMBRAL_ALTA = 70
 UMBRAL_MEDIA = 40
 
 
-def _clamp(v, lo=0.0, hi=100.0):
-    return max(lo, min(hi, v))
-
-
 def _decision(score):
     if score >= UMBRAL_ALTA:
         return "ALTA"
@@ -44,8 +40,7 @@ def indicador_poblacional(barrio):
     """
     Indicador poblacional / socioeconómico (0-100) de un barrio: normalización
     lineal del IPS (1-5). Devuelve None si el punto no cae en un barrio o el
-    barrio no tiene IPS cargado. Usado por `calcular` y por el comando de
-    calibración.
+    barrio no tiene IPS cargado.
     """
     if barrio is None or not barrio.ips:
         return None
@@ -63,8 +58,8 @@ def calcular(lat, lng, rubro):
     zona = analizar_zona(lat, lng, rubro)
     n_comp = zona["cantidad_mismo_rubro"]
     n_com = zona["cantidad_total_comercios"]
-    ind_competencia = round(_clamp(100 * (1 - min(n_comp, CAP_COMPETIDORES) / CAP_COMPETIDORES)), 1)
-    ind_actividad = round(_clamp(100 * min(n_com, CAP_COMERCIOS) / CAP_COMERCIOS), 1)
+    ind_competencia = round(100 * (1 - min(n_comp, CAP_COMPETIDORES) / CAP_COMPETIDORES), 1)
+    ind_actividad = round(100 * min(n_com, CAP_COMERCIOS) / CAP_COMERCIOS, 1)
 
     # 4. Score ponderado (si el punto cae fuera de un barrio, poblacional = 50 neutral).
     pob = ind_poblacional if ind_poblacional is not None else 50.0
@@ -96,7 +91,6 @@ def calcular(lat, lng, rubro):
         "competencia": {
             "competidores_directos": n_comp,
             "comercios_totales": n_com,
-            "resenas_totales": zona["total_resenas"],
         },
         "lugares": zona["lugares"],
         "cacheado": zona["cacheado"],
