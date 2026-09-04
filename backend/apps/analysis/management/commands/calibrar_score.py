@@ -113,11 +113,8 @@ class Command(BaseCommand):
             f"actividad={scoring.PESO_ACTIVIDAD}  competencia={scoring.PESO_COMPETENCIA}"
         )
         self.stdout.write(
-            f"  SUB-POB socio={scoring.PESO_SOCIO_POBL}  densidad={scoring.PESO_DENS_POBL}"
-        )
-        self.stdout.write(
             f"  CAPS    competidores={scoring.CAP_COMPETIDORES}  "
-            f"resenas={scoring.CAP_RESENAS}  densidad={scoring.CAP_DENSIDAD:.0f} hab/km2"
+            f"comercios={scoring.CAP_COMERCIOS}"
         )
         self.stdout.write(
             f"  UMBRAL  ALTA>={scoring.UMBRAL_ALTA}  MEDIA>={scoring.UMBRAL_MEDIA}"
@@ -127,34 +124,21 @@ class Command(BaseCommand):
         self.stdout.write(self.style.MIGRATE_HEADING(
             "\n== Indicadores demograficos (sobre los barrios cargados) =="
         ))
-        socio, dens, pobl = [], [], []
-        sin_ips = sin_dens = 0
+        pobl = []
+        sin_ips = 0
         for b in Barrio.objects.all():
-            s = (b.ips - 1) / 4 * 100 if b.ips else None
-            d = (
-                scoring._clamp(b.densidad_hab_km2 / scoring.CAP_DENSIDAD * 100)
-                if b.densidad_hab_km2 else None
-            )
-            if s is not None:
-                socio.append(s)
-            else:
-                sin_ips += 1
-            if d is not None:
-                dens.append(d)
-            else:
-                sin_dens += 1
             p = scoring.indicador_poblacional(b)
             if p is not None:
                 pobl.append(p)
+            else:
+                sin_ips += 1
 
         self._reporte(
-            "Socioeconomico (IPS)", socio, es_cap=False,
-            nota="el IPS aporta solo 5 niveles discretos (1-5); el detalle fino lo da la densidad.",
+            "Poblacional (IPS)", pobl, es_cap=False,
+            nota="el IPS aporta solo 5 niveles discretos (1-5): la dispersion real es baja.",
         )
-        self._reporte("Densidad poblacional", dens)
-        self._reporte("Poblacional combinado", pobl, es_cap=False)
-        if sin_ips or sin_dens:
-            self.stdout.write(f"\n  (barrios sin IPS: {sin_ips} | sin densidad: {sin_dens})")
+        if sin_ips:
+            self.stdout.write(f"\n  (barrios sin IPS: {sin_ips})")
 
         # ---------- Modo comercial (con costo) ----------
         n_places = opts["places"]

@@ -4,7 +4,6 @@ Tests del motor de score (`scoring`) y de los endpoints de análisis.
 Las consultas a Google Places se mockean siempre (`scoring.analizar_zona`),
 así los tests no dependen de la red ni consumen cuota.
 """
-import math
 from unittest.mock import patch
 
 from django.contrib.gis.geos import MultiPolygon, Polygon
@@ -41,13 +40,16 @@ def _zona(competidores=0, comercios=0, resenas=0, lugares=None):
 
 
 class IndicadorPoblacionalTest(TestCase):
-    """El indicador poblacional combina IPS (1-5) y densidad, o None sin datos."""
+    """El indicador poblacional es una normalización lineal del IPS (1-5), o None sin datos."""
 
     def test_sin_barrio_es_none(self):
         self.assertIsNone(scoring.indicador_poblacional(None))
 
-    def test_solo_ips_sin_densidad(self):
-        # IPS 5 -> s_socio = 100; sin densidad usa solo el socioeconómico.
+    def test_barrio_sin_ips_es_none(self):
+        barrio = Barrio(nombre="X")
+        self.assertIsNone(scoring.indicador_poblacional(barrio))
+
+    def test_ips_maximo_es_cien(self):
         barrio = Barrio(nombre="X", ips=5)
         self.assertEqual(scoring.indicador_poblacional(barrio), 100.0)
 
@@ -55,10 +57,14 @@ class IndicadorPoblacionalTest(TestCase):
         barrio = Barrio(nombre="X", ips=1)
         self.assertEqual(scoring.indicador_poblacional(barrio), 0.0)
 
-    def test_combina_ips_y_densidad(self):
-        # IPS 3 -> 50 ; densidad = CAP -> 100 ; 0.6*50 + 0.4*100 = 70
-        barrio = Barrio(nombre="X", ips=3, densidad_hab_km2=scoring.CAP_DENSIDAD)
-        self.assertEqual(scoring.indicador_poblacional(barrio), 70.0)
+    def test_densidad_no_afecta_el_indicador(self):
+        # La densidad ya no forma parte del indicador poblacional (solo IPS).
+        con_densidad = Barrio(nombre="X", ips=3, densidad_hab_km2=20000)
+        sin_densidad = Barrio(nombre="Y", ips=3, densidad_hab_km2=None)
+        self.assertEqual(
+            scoring.indicador_poblacional(con_densidad),
+            scoring.indicador_poblacional(sin_densidad),
+        )
 
 
 class ScoringCalcularTest(TestCase):
@@ -80,16 +86,16 @@ class ScoringCalcularTest(TestCase):
         res = self._calcular(competidores=3, comercios=10, resenas=2000)
         ind = res["indicadores"]
 
-        # Poblacional: IPS 4 -> 75 ; densidad 9000 -> 60 ; 0.6*75 + 0.4*60 = 69
-        self.assertEqual(ind["poblacional"], 69.0)
+        # Poblacional: solo IPS. IPS 4 -> (4-1)/4*100 = 75
+        self.assertEqual(ind["poblacional"], 75.0)
         # Competencia inversa: 1 - 3/15 = 0.8 -> 80
         self.assertEqual(ind["competencia"], 80.0)
-        # Actividad: curva log sobre las reseñas
-        act_esperada = round(100 * math.log1p(2000) / math.log1p(scoring.CAP_RESENAS), 1)
+        # Actividad: comercios totales sobre el tope, lineal
+        act_esperada = round(100 * min(10, scoring.CAP_COMERCIOS) / scoring.CAP_COMERCIOS, 1)
         self.assertEqual(ind["actividad_economica"], act_esperada)
         # Score = suma ponderada con los pesos vigentes
         esperado = round(
-            scoring.PESO_POBLACIONAL * 69.0
+            scoring.PESO_POBLACIONAL * 75.0
             + scoring.PESO_ACTIVIDAD * act_esperada
             + scoring.PESO_COMPETENCIA * 80.0,
             1,
@@ -106,12 +112,12 @@ class ScoringCalcularTest(TestCase):
         res = self._calcular(competidores=scoring.CAP_COMPETIDORES + 5)
         self.assertEqual(res["indicadores"]["competencia"], 0.0)
 
-    def test_actividad_cero_sin_resenas(self):
-        res = self._calcular(resenas=0)
+    def test_actividad_cero_sin_comercios(self):
+        res = self._calcular(comercios=0)
         self.assertEqual(res["indicadores"]["actividad_economica"], 0.0)
 
     def test_actividad_se_satura_en_cien(self):
-        res = self._calcular(resenas=scoring.CAP_RESENAS * 10)
+        res = self._calcular(comercios=scoring.CAP_COMERCIOS * 10)
         self.assertEqual(res["indicadores"]["actividad_economica"], 100.0)
 
     def test_fuera_de_barrio_usa_poblacional_neutro(self):
