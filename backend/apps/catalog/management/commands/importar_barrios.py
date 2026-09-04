@@ -172,7 +172,6 @@ class Command(BaseCommand):
                     "semaforo": semaforo if semaforo in SEMAFORO_LABEL else "",
                     "ips": ips,
                     "indice_socioeconomico": SEMAFORO_LABEL.get(semaforo, ""),
-                    "indice_socioeconomico_num": round((ips - 1) / 4 * 100, 1) if ips else None,
                     "cantidad_habitantes": poblacion,
                     "total_hogares": _to_int(_first(data, FIELD_ALIASES["hogares"])),
                     "nbi": _to_int(_first(data, FIELD_ALIASES["nbi"])),

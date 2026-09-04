@@ -19,7 +19,7 @@ class BarrioResumenSerializer(serializers.ModelSerializer):
         fields = [
             "id", "nombre", "seccional",
             "semaforo", "semaforo_display", "ips",
-            "indice_socioeconomico", "indice_socioeconomico_num",
+            "indice_socioeconomico",
             "cantidad_habitantes", "total_hogares", "nbi",
             "superficie_ha", "densidad_hab_km2",
         ]
